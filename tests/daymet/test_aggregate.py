@@ -88,6 +88,17 @@ def test_annual_and_labels() -> None:
     assert aggregation_spec("tmax", "monthly").field_label == "tmax_monthly_mean_degC"
 
 
+def test_srad_mean_is_labelled_daylight_average() -> None:
+    # Daily srad is averaged over the daylight period (dayl s), not 24 h (daily guide Table 1).
+    for period in ("monthly", "annual"):
+        spec = aggregation_spec("srad", period)
+        assert spec.method == "mean" and spec.units == "W/m2"
+        assert "daylight-period-average" in spec.definition
+        assert "not a 24-h mean" in spec.definition
+        assert "srad='total'" in spec.definition
+    assert "daylight" not in aggregation_spec("tmax", "monthly").definition
+
+
 def test_disallowed_alternative() -> None:
     with pytest.raises(ValueError, match="cannot be aggregated"):
         aggregation_spec("prcp", "monthly", "mean")

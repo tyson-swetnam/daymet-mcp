@@ -205,6 +205,8 @@ async def test_summary_annual_months_and_overrides(server: DaymetServer) -> None
     assert annual["series"]["prcp"]["units"] == "mm/year"
     assert annual["series"]["prcp"]["values"] == [round(math.fsum(_fixture_prcp()), 3)]
     assert annual["periods"][0]["dayCount"] == 365
+    srad = annual["series"]["srad"]
+    assert srad["units"] == "W/m2" and "not a 24-h mean" in srad["definition"]
     some = await call_ok(
         server,
         "daymet_get_point_summary",

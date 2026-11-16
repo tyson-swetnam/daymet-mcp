@@ -158,6 +158,14 @@ def aggregation_spec(
         label_units = info.daily_units
         word = "mean"
         definition = f"arithmetic mean of daily {variable} over {span_days}"
+        if variable == "srad":
+            # Daily srad is a flux averaged over the daylight period (dayl seconds), not over
+            # 24 h (daily guide, Table 1); a mean of those values keeps that meaning.
+            definition = (
+                "arithmetic mean of daily daylight-period-average srad (W/m2 averaged over the "
+                f"dayl seconds of each day, not a 24-h mean) over {span_days}; for energy "
+                "per area use aggregation_overrides srad='total' (MJ/m2)"
+            )
     label = f"{variable}_{period}_{word}_{_LABEL_UNITS[label_units]}"
     return AggSpec(variable, period, method, info.daily_units, units, label, definition)
 
