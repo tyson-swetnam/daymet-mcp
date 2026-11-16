@@ -546,7 +546,9 @@ Citation rules:
   - 2131/2130 are cited only for `products` that were read from those collections (not in v0.1).
 - **Tool (required when single-pixel was used):** Thornton, M.M., and R. Devarakonda. 2011. Daymet Single Pixel
   Extraction Tool. https://doi.org/10.3334/ORNLDAAC/2361 [seen].
-- **Method (recommended):** Thornton et al. 2021, *Scientific Data* 8:190, https://doi.org/10.1038/s41597-021-00973-0.
+- **Method (recommended):** Thornton et al. 2021, *Scientific Data* 8:190, https://doi.org/10.1038/s41597-021-00973-0,
+  and Thornton, Running & White 1997, *J. Hydrology* 190:214–251, https://doi.org/10.1016/S0022-1694(96)03128-9; the
+  citations page names both as the general methods reference [seen; added after review].
   When `srad` or `vp` are among the variables, add Thornton et al. 2000 (AFM 104:255–271) and Thornton & Running 1999
   (AFM 93:211–228), as daymet.ornl.gov/citations asks [seen].
 - **Author discrepancy:** the citation embedded in the single-pixel response adds B.E. Wilson; the user guide does not

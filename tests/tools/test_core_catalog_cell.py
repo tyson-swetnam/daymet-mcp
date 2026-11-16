@@ -149,6 +149,7 @@ async def test_citation_defaults(server: DaymetServer) -> None:
         ("dataset", "required", "10.3334/ORNLDAAC/2129"),
         ("tool", "required", "10.3334/ORNLDAAC/2361"),
         ("method", "recommended", "10.1038/s41597-021-00973-0"),
+        ("method", "recommended", "10.1016/S0022-1694(96)03128-9"),
     ]
     assert out["accessedOn"] == "2026-11-15"
     assert out["citations"][0]["doiUrl"] == "https://doi.org/10.3334/ORNLDAAC/2129"
@@ -157,7 +158,7 @@ async def test_citation_defaults(server: DaymetServer) -> None:
     assert out["dataPolicyUrl"] == "https://daymet.ornl.gov/citations"
     # default variables are all seven, which include srad and vp: two more method papers
     full = await call_ok(server, "daymet_get_citation")
-    assert len(full["citations"]) == 5
+    assert len(full["citations"]) == 6
 
 
 async def test_citation_variants(server: DaymetServer) -> None:
@@ -169,6 +170,7 @@ async def test_citation_variants(server: DaymetServer) -> None:
     dois = [c["doi"] for c in out["citations"]]
     assert "10.3334/ORNLDAAC/2361" not in dois  # no single-pixel tool citation
     assert "10.3334/ORNLDAAC/2131" in dois
-    assert len([c for c in out["citations"] if c["role"] == "method"]) == 3
+    assert len([c for c in out["citations"] if c["role"] == "method"]) == 4
+    assert "10.1016/S0022-1694(96)03128-9" in dois  # general methods reference, always
     bare = await call_ok(server, "daymet_get_citation", {"include_method_papers": False})
     assert all(c["role"] != "method" for c in bare["citations"])

@@ -81,6 +81,21 @@ Thornton, P.E., R. Shrestha, M. Thornton, S.-C. Kao, Y. Wei, and B.E. Wilson. 20
 ```
 <!-- end -->
 
+<!-- template id="method_1997" role="method" requirement="recommended" doi="10.1016/S0022-1694(96)03128-9" -->
+Thornton, P.E., S.W. Running, and M.A. White. 1997. Generating surfaces of daily meteorological variables over large regions of complex terrain. Journal of Hydrology 190:214-251. https://doi.org/10.1016/S0022-1694(96)03128-9
+```bibtex
+@article{thornton1997surfaces,
+  author = {Thornton, P. E. and Running, S. W. and White, M. A.},
+  title = {Generating surfaces of daily meteorological variables over large regions of complex terrain},
+  journal = {Journal of Hydrology},
+  volume = {190},
+  pages = {214--251},
+  year = {1997},
+  doi = {10.1016/S0022-1694(96)03128-9}
+}
+```
+<!-- end -->
+
 <!-- template id="method_2000" role="method" requirement="recommended" doi="10.1016/S0168-1923(00)00170-2" variables="srad,vp" -->
 Thornton, P.E., H. Hasenauer, and M.A. White. 2000. Simultaneous estimation of daily solar radiation and humidity from observed temperature and precipitation: an application over complex terrain in Austria. Agricultural and Forest Meteorology 104:255-271. https://doi.org/10.1016/S0168-1923(00)00170-2
 ```bibtex

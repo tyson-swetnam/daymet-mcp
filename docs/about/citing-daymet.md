@@ -31,9 +31,10 @@ status: stable
   the daily product and cite this DOI, not the ORNL monthly (2131) or annual (2130) products.
 * **Tool (required when the single-pixel API was used)**: Thornton, M.M., and R. Devarakonda.
   2011. Daymet Single Pixel Extraction Tool. https://doi.org/10.3334/ORNLDAAC/2361.
-* **Method (recommended)**: Thornton et al. 2021, Scientific Data 8:190,
-  https://doi.org/10.1038/s41597-021-00973-0; with srad or vp also Thornton et al. 2000 and
-  Thornton and Running 1999.
+* **Method (recommended)**: the general methods reference is Thornton et al. 2021, Scientific
+  Data 8:190, https://doi.org/10.1038/s41597-021-00973-0, together with Thornton, Running and
+  White 1997, Journal of Hydrology 190:214-251, https://doi.org/10.1016/S0022-1694(96)03128-9;
+  with srad or vp also Thornton et al. 2000 and Thornton and Running 1999.
 
 The citation embedded in single-pixel responses adds B.E. Wilson as an author; the user guide
 does not, and daymet-mcp uses the user-guide form. All Daymet data are provisional and subject to

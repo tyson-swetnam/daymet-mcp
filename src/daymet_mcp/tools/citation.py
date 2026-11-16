@@ -52,7 +52,8 @@ def select(
     if "single_pixel" in access:
         chosen.append(t["single_pixel"])
     if include_methods:
-        chosen.append(t["method_2021"])
+        # daymet.ornl.gov/citations names both papers as the general methods reference.
+        chosen += [t["method_2021"], t["method_1997"]]
         if {"srad", "vp"} & set(variables):
             chosen += [t["method_2000"], t["method_1999"]]
     return chosen
