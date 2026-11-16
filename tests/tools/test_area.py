@@ -7,11 +7,16 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from collections.abc import Callable
+from itertools import pairwise
 from pathlib import Path
+from typing import Any
 
+import anyio
 import pytest
 
+import daymet_mcp.tools.area as area_mod
 from daymet_mcp.config import Config
 from daymet_mcp.daymet.earthdata import grid_extra_available
 from daymet_mcp.server import DaymetServer
@@ -107,6 +112,115 @@ async def test_area_http_mode_refuses_earthdata(make_server: Callable[..., Dayme
         },
         code="not_available_in_http_mode",
     )
+
+
+HUGE_BBOX = {"west": -110.0, "south": 30.0, "east": -90.0, "north": 46.0}  # ~3.3M candidates
+MID_BBOX = {"west": -107.8, "south": 34.8, "east": -105.2, "north": 36.8}  # 57,085 candidates
+
+
+def _no_enumeration(monkeypatch: pytest.MonkeyPatch) -> None:
+    def boom(*_: object) -> None:
+        raise AssertionError("cells were enumerated for a request that should be refused first")
+
+    monkeypatch.setattr(area_mod, "enumerate_cells", boom)
+
+
+@pytest.mark.parametrize(
+    ("transport", "token"), [("http", None), ("http", TEST_TOKEN), ("stdio", None)]
+)
+async def test_huge_bbox_refused_before_planning(
+    make_server: Callable[..., DaymetServer],
+    router: FixtureRouter,
+    monkeypatch: pytest.MonkeyPatch,
+    transport: str,
+    token: str | None,
+) -> None:
+    # Regression (protocol-security review): this bbox used to cost ~15-18 s of CPU on the
+    # event loop before being refused; /healthz could not answer meanwhile.
+    _no_enumeration(monkeypatch)
+    server = make_server(transport=transport, token=token)
+    t0 = time.monotonic()
+    err = await call_err(
+        server,
+        "daymet_get_area",
+        {**BASE, "bbox": HUGE_BBOX, "variables": ["prcp"], "temporal": "annual"},
+        code="query_too_large",
+    )
+    assert time.monotonic() - t0 < 1.0
+    assert err["details"]["limitName"] == "candidate_cells"
+    assert err["details"]["limit"] == area_mod.PIXEL_RECT_FACTOR * 121
+    assert err["details"]["requested"] > 3_000_000
+    assert router.calls == []
+
+
+async def test_huge_bbox_cap_follows_earthdata_limit_with_token(
+    make_server: Callable[..., DaymetServer], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _no_enumeration(monkeypatch)
+    server = make_server(token=TEST_TOKEN)
+    err = await call_err(
+        server,
+        "daymet_get_area",
+        {**BASE, "bbox": HUGE_BBOX, "variables": ["prcp"], "temporal": "annual"},
+        code="query_too_large",
+    )
+    # 25e6 values / 365 days = 68,493 cells, plus the one-cell margin of the rectangle
+    assert 25_000_000 // 365 < err["details"]["limit"] < area_mod.MAX_CANDIDATE_CELLS
+
+
+async def test_mid_bbox_without_token_says_what_is_missing(
+    make_server: Callable[..., DaymetServer],
+    router: FixtureRouter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Too big for single-pixel, small enough for Earthdata: the caller learns what would help.
+    _no_enumeration(monkeypatch)
+    args = {**BASE, "bbox": MID_BBOX, "variables": ["prcp"], "temporal": "annual"}
+    err = await call_err(make_server(), "daymet_get_area", args, code="auth_required")
+    assert err["details"]["reason"] == "token_missing"
+    await call_err(
+        make_server(transport="http"), "daymet_get_area", args, code="not_available_in_http_mode"
+    )
+    assert router.calls == []
+
+
+async def test_explicit_earthdata_refused_without_planning(
+    make_server: Callable[..., DaymetServer], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _no_enumeration(monkeypatch)
+    await call_err(
+        make_server(transport="http", token=TEST_TOKEN),
+        "daymet_get_area",
+        {**BASE, "variables": ["prcp"], "temporal": "annual", "backend": "earthdata"},
+        code="not_available_in_http_mode",
+    )
+
+
+async def test_cell_enumeration_runs_off_the_event_loop(
+    server: DaymetServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = area_mod.enumerate_cells
+
+    def slow(*a: Any) -> Any:
+        time.sleep(0.6)  # stands in for a large, allowed enumeration
+        return real(*a)
+
+    monkeypatch.setattr(area_mod, "enumerate_cells", slow)
+    stamps: list[float] = []
+
+    async def ticker() -> None:
+        for _ in range(20):
+            stamps.append(time.monotonic())
+            await anyio.sleep(0.05)
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(ticker)
+        await anyio.sleep(0.12)  # the ticker is running before the call starts
+        await call_ok(
+            server, "daymet_get_area", {**BASE, "variables": ["prcp"], "temporal": "annual"}
+        )
+    gaps = [b - a for a, b in pairwise(stamps)]
+    assert max(gaps) < 0.3  # the loop kept running during the 0.6 s enumeration
 
 
 @pytest.mark.parametrize(

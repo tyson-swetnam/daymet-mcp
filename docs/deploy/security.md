@@ -30,3 +30,6 @@ status: stable
 * **Outbound requests** go only to an allow-list of HTTPS hosts (`daymet.ornl.gov`,
   `cmr.earthdata.nasa.gov` and three Earthdata hosts), GET only, with a generic User-Agent and local
   rate limits.
+* **Bounded CPU per call.** An area request is sized from its bounding rectangle before any
+  cell is enumerated and refused when no backend open to the caller could serve it; the
+  enumeration itself runs in a worker thread, so `/healthz` and the per-tool timeout keep working.

@@ -51,3 +51,11 @@ The single-pixel mosaic sends one request per cell, at most 2 requests per secon
 A request that exceeds a limit is refused before any upstream call with `query_too_large`, naming
 the limit and the requested amount. Above the limits without a token the answer is
 `auth_required`; see [Earthdata credentials](../getting-started/earthdata-credentials.md).
+
+Before any cell is enumerated, the bounding rectangle of the bbox on the 1 km grid is checked
+against the largest size a backend available to the caller could serve: 400 x
+`pixel_mosaic_max_cells` (48,400 cells by default; thin bboxes are rotated against the grid, so
+their rectangle is much larger than their cell count) and, with a usable Earthdata token,
+`earthdata_max_values` / (365 x years x variables). A larger rectangle is refused at once with
+`query_too_large` and `limitName: candidate_cells`, or with `auth_required` /
+`not_available_in_http_mode` when Earthdata alone could serve it.

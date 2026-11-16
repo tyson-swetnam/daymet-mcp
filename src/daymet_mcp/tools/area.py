@@ -13,6 +13,7 @@ import json
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +58,15 @@ from daymet_mcp.registry import register_tool
 from daymet_mcp.tools._common import CITE_STEP, check_years, page_window, round_daily, specs_for
 from daymet_mcp.tools.citation import citation_texts
 
-MAX_CANDIDATE_CELLS = 4_000_000
+#: Absolute ceiling on the bounding rectangle that is ever enumerated: one variable-year at the
+#: largest allowed ``limits.earthdata_max_values`` (200e6 / 365 = 547,945 cells) plus margin.
+#: The per-request ceiling (:func:`_rectangle_cap`) is usually far lower.
+MAX_CANDIDATE_CELLS = 600_000
+#: The bounding rectangle of a bbox that the single-pixel mosaic can serve may be much larger than
+#: its included-cell count (thin bboxes are rotated against the LCC grid). The largest rectangle
+#: seen for 2,132 random accepted bboxes with <= 121 cells was 32,964 cells (a 2.9 x 0.0012 degree
+#: strip at 25.8N, 136.9W), so the single-pixel cap is this factor x pixel_mosaic_max_cells.
+PIXEL_RECT_FACTOR = 400
 EDGE_SAMPLES = 25
 
 
@@ -76,8 +85,30 @@ class AreaPlan:
         return [lcc.Y_FIRST_CENTRE - lcc.STEP * r for r in range(self.rows[0], self.rows[1] + 1)]
 
 
-def plan_area(bbox: BBox) -> AreaPlan:
-    """Cells whose centre lies inside ``bbox`` (NA grid only in v0.1, D9)."""
+@dataclass(frozen=True)
+class Bounds:
+    """Candidate cell rectangle (inclusive, with a one-cell margin) around a bbox."""
+
+    c0: int
+    c1: int
+    r0: int
+    r1: int
+
+    @property
+    def n_cols(self) -> int:
+        return self.c1 - self.c0 + 1
+
+    @property
+    def n_rows(self) -> int:
+        return self.r1 - self.r0 + 1
+
+    @property
+    def cells(self) -> int:
+        return self.n_cols * self.n_rows
+
+
+def candidate_bounds(bbox: BBox) -> Bounds:
+    """Region checks and the candidate rectangle; cheap (about 100 projections)."""
     probes = [
         (bbox.south, bbox.west),
         (bbox.south, bbox.east),
@@ -114,23 +145,29 @@ def plan_area(bbox: BBox) -> AreaPlan:
             ys.append(y)
     lo_cell = lcc.snap(min(xs), max(ys))
     hi_cell = lcc.snap(max(xs), min(ys))
-    c0, c1 = lo_cell.col - 1, hi_cell.col + 1
-    r0, r1 = lo_cell.row - 1, hi_cell.row + 1
-    if (c1 - c0 + 1) * (r1 - r0 + 1) > MAX_CANDIDATE_CELLS:
-        raise ToolError(
-            "query_too_large",
-            "The bbox covers far more cells than any backend allows.",
-            details={
-                "limitName": "candidate_cells",
-                "limit": MAX_CANDIDATE_CELLS,
-                "requested": (c1 - c0 + 1) * (r1 - r0 + 1),
-                "unit": "cells",
-                "suggestion": "use a smaller bbox",
-            },
-        )
+    return Bounds(lo_cell.col - 1, hi_cell.col + 1, lo_cell.row - 1, hi_cell.row + 1)
+
+
+def _too_many_candidates(bounds: Bounds, cap: int) -> ToolError:
+    return ToolError(
+        "query_too_large",
+        "The bbox covers more cells than any backend available for this request allows.",
+        details={
+            "limitName": "candidate_cells",
+            "limit": cap,
+            "requested": bounds.cells,
+            "unit": "cells in the bounding rectangle",
+            "suggestion": "use a smaller bbox",
+        },
+    )
+
+
+def enumerate_cells(bbox: BBox, bounds: Bounds) -> AreaPlan:
+    """Cells of ``bounds`` whose centre lies inside ``bbox``: one inverse projection per cell,
+    so callers bound ``bounds.cells`` first and run this off the event loop."""
     included: list[lcc.Cell] = []
-    for r in range(r0, r1 + 1):
-        for c in range(c0, c1 + 1):
+    for r in range(bounds.r0, bounds.r1 + 1):
+        for c in range(bounds.c0, bounds.c1 + 1):
             cell = lcc.Cell(c, r)
             if not cell.in_grid():
                 continue
@@ -149,6 +186,15 @@ def plan_area(bbox: BBox) -> AreaPlan:
     return AreaPlan(cols, rows, included)
 
 
+def plan_area(bbox: BBox, cap: int = MAX_CANDIDATE_CELLS) -> AreaPlan:
+    """Cells whose centre lies inside ``bbox`` (NA grid only in v0.1, D9), synchronously."""
+    bounds = candidate_bounds(bbox)
+    cap = min(cap, MAX_CANDIDATE_CELLS)
+    if bounds.cells > cap:
+        raise _too_many_candidates(bounds, cap)
+    return enumerate_cells(bbox, bounds)
+
+
 @dataclass
 class AreaData:
     plan: AreaPlan
@@ -160,6 +206,80 @@ class AreaData:
     elevation: list[list[float | None]] | None
     notes: list[str] = field(default_factory=list)
     endpoints: list[str] = field(default_factory=list)
+
+
+def _earthdata_blocked(ctx: ToolContext) -> str | None:
+    """Why the Earthdata backend cannot run for this caller (None when it can)."""
+    if ctx.transport == "http" and not ctx.config.earthdata.allow_in_http_mode:
+        return "http"
+    if ctx.config.token_value() is None:
+        return "token"
+    return None
+
+
+def _earthdata_error(ctx: ToolContext, reason: str, n_cells: int, n_years: int) -> ToolError:
+    lim = ctx.config.limits
+    if reason == "http":
+        return ToolError(
+            "not_available_in_http_mode",
+            "The Earthdata backend is disabled on this hosted server.",
+            details={
+                "reason": "earthdata_disabled_in_http_mode",
+                "cells": n_cells,
+                "limit": lim.pixel_mosaic_max_cells,
+            },
+            hint="Reduce the bbox to the credential-free limit, or run daymet-mcp locally.",
+        )
+    return ToolError(
+        "auth_required",
+        "This request needs gridded Daymet data from NASA Earthdata (area of "
+        f"{n_cells} cells x {n_years} years exceeds the credential-free limit of "
+        f"{lim.pixel_mosaic_max_cells} cells / {lim.pixel_mosaic_max_cell_years} cell-years). "
+        "No Earthdata token is configured. Set the environment variable "
+        "DAYMET_MCP_EARTHDATA__TOKEN before starting the server (stdio), or reduce the bbox.",
+        details={
+            "reason": "token_missing",
+            "cells": n_cells,
+            "guide": "daymet://guide/earthdata-credentials",
+        },
+    )
+
+
+def _earthdata_cell_limit(ctx: ToolContext, n_years: int, n_vars: int) -> int:
+    """Largest included-cell rectangle the Earthdata value limit allows."""
+    return ctx.config.limits.earthdata_max_values // (365 * max(n_years, 1) * max(n_vars, 1))
+
+
+def _check_rectangle(
+    args: AreaInput | DownloadAreaInput,
+    ctx: ToolContext,
+    bounds: Bounds,
+    n_years: int,
+    n_vars: int,
+) -> None:
+    """Refuse, before any cell is enumerated, a rectangle that no usable backend could serve.
+
+    Enumeration costs one inverse projection per candidate cell on the CPU, so an
+    anonymous caller must not be able to make it large (protocol-security review).
+    """
+    blocked = _earthdata_blocked(ctx)
+    if args.backend == "earthdata" and blocked is not None:
+        raise _earthdata_error(ctx, blocked, bounds.cells, n_years)
+    caps: list[int] = []
+    if args.backend in ("auto", "single_pixel"):
+        caps.append(PIXEL_RECT_FACTOR * ctx.config.limits.pixel_mosaic_max_cells)
+    ed_limit = _earthdata_cell_limit(ctx, n_years, n_vars)
+    # the candidate rectangle carries a one-cell margin on each side
+    ed_cap = ed_limit + 2 * (bounds.n_cols + bounds.n_rows)
+    if args.backend in ("auto", "earthdata") and blocked is None:
+        caps.append(ed_cap)
+    cap = min(max(caps), MAX_CANDIDATE_CELLS)
+    if bounds.cells <= cap:
+        return
+    if args.backend == "auto" and blocked is not None and bounds.cells <= ed_cap:
+        # Earthdata could serve this size; say what is missing, as the full plan would.
+        raise _earthdata_error(ctx, blocked, bounds.cells, n_years)
+    raise _too_many_candidates(bounds, cap)
 
 
 def _choose_backend(
@@ -188,31 +308,9 @@ def _choose_backend(
             )
         return "single_pixel"
     # earthdata needed
-    if ctx.transport == "http" and not ctx.config.earthdata.allow_in_http_mode:
-        raise ToolError(
-            "not_available_in_http_mode",
-            "The Earthdata backend is disabled on this hosted server.",
-            details={
-                "reason": "earthdata_disabled_in_http_mode",
-                "cells": n_cells,
-                "limit": lim.pixel_mosaic_max_cells,
-            },
-            hint="Reduce the bbox to the credential-free limit, or run daymet-mcp locally.",
-        )
-    if ctx.config.token_value() is None:
-        raise ToolError(
-            "auth_required",
-            "This request needs gridded Daymet data from NASA Earthdata (area of "
-            f"{n_cells} cells x {n_years} years exceeds the credential-free limit of "
-            f"{lim.pixel_mosaic_max_cells} cells / {lim.pixel_mosaic_max_cell_years} cell-years). "
-            "No Earthdata token is configured. Set the environment variable "
-            "DAYMET_MCP_EARTHDATA__TOKEN before starting the server (stdio), or reduce the bbox.",
-            details={
-                "reason": "token_missing",
-                "cells": n_cells,
-                "guide": "daymet://guide/earthdata-credentials",
-            },
-        )
+    blocked = _earthdata_blocked(ctx)
+    if blocked is not None:
+        raise _earthdata_error(ctx, blocked, n_cells, n_years)
     require_grid_extra()
     return "earthdata"
 
@@ -284,16 +382,25 @@ async def _earthdata_cells(
 
 
 async def build_area(args: AreaInput | DownloadAreaInput, ctx: ToolContext) -> AreaData:
-    plan = plan_area(args.bbox)
     years = list(range(args.start_year, args.end_year + 1))
-    await check_years(ctx, years)
-    backend = _choose_backend(args, ctx, len(plan.included), len(years))
     variables: list[Variable] = list(dict.fromkeys(args.variables))
     specs = (
         None
         if args.temporal == "daily"
         else specs_for(variables, args.temporal, args.aggregation_overrides)
     )
+    n_vars = len(variables) + (
+        1 if specs and any(s.method == "total" for s in specs) and "dayl" not in variables else 0
+    )
+    bounds = candidate_bounds(args.bbox)
+    _check_rectangle(args, ctx, bounds, len(years), n_vars)
+    # Pure-Python CPU work: keep it off the event loop so health checks and the per-tool
+    # timeout keep working (abandon_on_cancel lets fail_after return; the bounded thread ends).
+    plan = await anyio.to_thread.run_sync(
+        partial(enumerate_cells, args.bbox, bounds), abandon_on_cancel=True
+    )
+    await check_years(ctx, years)
+    backend = _choose_backend(args, ctx, len(plan.included), len(years))
     notes = [PROVISIONAL_NOTE, ROUNDING_NOTE]
     elevation: list[list[float | None]] | None = None
     if backend == "single_pixel":
@@ -733,4 +840,4 @@ async def daymet_download_area(args: DownloadAreaInput, ctx: ToolContext) -> Dow
     )
 
 
-__all__ = ["build_area", "plan_area"]
+__all__ = ["build_area", "candidate_bounds", "enumerate_cells", "plan_area"]
