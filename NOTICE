@@ -1,0 +1,67 @@
+daymet-mcp
+Copyright (c) 2026 Tyson Lee Swetnam
+Licensed under the MIT License (see LICENSE). The copyright holder is an open owner
+decision (DESIGN.md §16, O1).
+
+------------------------------------------------------------------------------
+Third-party code
+------------------------------------------------------------------------------
+
+Parts of this software are adapted from idss-mesa/neon-mcp
+(https://github.com/idss-mesa/neon-mcp, commit 9655dc909da753efebe5fd6e8d33b006e3274982),
+Copyright (c) 2026 The Regents of the University of New Mexico, MIT License:
+
+  - src/daymet_mcp/registry.py, server.py, logging.py, models/common.py and
+    transport/streamable_http.py follow the structure of the neon-mcp modules of the
+    same names (adapted; see the module docstrings).
+  - scripts/gen_llms_txt.py, scripts/okf_validate.py and
+    scripts/postbuild_agent_surface.py are vendored from neon-mcp (which took them from
+    the UNM-CARC/docs OKF bundle) with project names and texts changed;
+    scripts/gen_tools_reference.py and scripts/gen_config_reference.py are rewritten after
+    the neon-mcp scripts of the same names.
+
+The MIT License text of neon-mcp:
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+------------------------------------------------------------------------------
+Daymet data in the test fixtures
+------------------------------------------------------------------------------
+
+tests/fixtures/daymet.ornl.gov/*.json are small extracts of Daymet V4 R1 daily data
+(single pixels for 2020, a 3x3 cell mosaic around the EEMT sample DEM, a 2-day window),
+fetched on 2026-11-15 without credentials from the ORNL DAAC single-pixel API
+(https://daymet.ornl.gov/single-pixel/api/data). tests/fixtures/cmr.earthdata.nasa.gov
+holds shrunk NASA CMR granule metadata; tests/fixtures/{opendap,urs}.earthdata.nasa.gov
+hold the headers of the unauthenticated Earthdata Login redirect chain.
+
+Daymet data are NOT covered by the MIT License. Cite them as:
+
+  Thornton, M.M., R. Shrestha, Y. Wei, P.E. Thornton, and S-C. Kao. 2022. Daymet: Daily
+  Surface Weather Data on a 1-km Grid for North America, Version 4 R1. ORNL DAAC, Oak
+  Ridge, Tennessee, USA. https://doi.org/10.3334/ORNLDAAC/2129
+
+  Thornton, M.M., and R. Devarakonda. 2011. Daymet Single Pixel Extraction Tool.
+  ORNL DAAC. https://doi.org/10.3334/ORNLDAAC/2361
+
+Sources disagree on the exact data terms (NASA Earth Science Data and Information Policy,
+"full and open sharing"; the AWS Open Data registry lists CC BY 4.0); all ask for the DOI
+citation. All Daymet data are provisional and subject to revision.
+
+tests/fixtures/synthetic/opendap_tmax_2020_3x3.nc4 is SYNTHETIC (hand-built by
+scripts/make_synthetic_netcdf.py); it is not Daymet data.
