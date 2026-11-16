@@ -169,6 +169,9 @@ async def serve_http(server: DaymetServer) -> None:
             port=cfg.port,
             log_level=cfg.log_level.lower(),
             lifespan="on",
+            # no uvicorn logging config: its loggers propagate to the root handler, which
+            # carries the secret filter (logging.setup_logging)
+            log_config=None,
             proxy_headers=True,
             server_header=False,
         )

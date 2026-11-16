@@ -128,6 +128,24 @@ def test_secret_redaction(capsys: pytest.CaptureFixture[str]) -> None:
     setup_logging("info", "stdio")
 
 
+@pytest.mark.parametrize("transport", ["http", "stdio"])
+def test_secret_redaction_in_tracebacks(capsys: pytest.CaptureFixture[str], transport: str) -> None:
+    # Regression (protocol-security review): redaction ran before format_exc_info, so a
+    # registered secret inside an exception message or traceback reached the log.
+    register_secret(TEST_TOKEN)
+    setup_logging("info", transport)
+    try:
+        raise RuntimeError(f"upstream said: Bearer {TEST_TOKEN}")
+    except RuntimeError:
+        structlog.get_logger("t").exception("tool.crash", note=TEST_TOKEN)
+        logging.getLogger("uvicorn.error").exception("stdlib crash")
+    err = capsys.readouterr().err
+    assert "tool.crash" in err and "RuntimeError" in err and "stdlib crash" in err
+    assert err.count("Traceback") == 2
+    assert TEST_TOKEN not in err
+    setup_logging("info", "stdio")
+
+
 def test_cli_print_config_and_version(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:

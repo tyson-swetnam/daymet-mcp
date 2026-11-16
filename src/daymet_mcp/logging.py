@@ -73,12 +73,23 @@ def redact_secrets(
     return event_dict
 
 
+_TRACEBACK_FORMATTER = logging.Formatter()
+
+
 class _StdlibSecretFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if _SECRETS:
             record.msg = mask(str(record.msg))
             if isinstance(record.args, tuple):
                 record.args = tuple(mask(a) for a in record.args)
+            # Formatter.format reuses a pre-set exc_text, so the masked traceback is what is
+            # written (uvicorn logs ASGI crashes with exc_info).
+            if record.exc_info and not record.exc_text:
+                record.exc_text = _TRACEBACK_FORMATTER.formatException(record.exc_info)
+            if record.exc_text:
+                record.exc_text = mask(record.exc_text)
+            if record.stack_info:
+                record.stack_info = mask(record.stack_info)
         return True
 
 
@@ -110,9 +121,10 @@ def setup_logging(level: str = "info", transport: str = "stdio") -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
-            redact_secrets,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
+            # last before rendering, so rendered tracebacks and stacks are masked too
+            redact_secrets,
             renderer,
         ],
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
