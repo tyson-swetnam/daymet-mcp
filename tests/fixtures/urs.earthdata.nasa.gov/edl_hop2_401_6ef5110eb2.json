@@ -1,0 +1,1 @@
+{"status":401,"headers":{"content-type":"text/html; charset=utf-8","www-authenticate":"Basic realm=\"Please enter your Earthdata Login credentials. If you do not have a Earthdata Login, create one at https://urs.earthdata.nasa.gov//users/new\""},"text":"HTTP Basic: Access denied.\n"}

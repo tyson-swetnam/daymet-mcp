@@ -1,0 +1,1 @@
+{"status":400,"headers":{"content-type":"application/json"},"json":{"message":"Daymet Tile was not found with input lat and lon: /api/data?lat=29.999776&lon=-130.004172&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&format=json&years=2020"}}

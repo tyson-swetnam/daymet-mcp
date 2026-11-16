@@ -1,0 +1,185 @@
+{
+ "note": "Daymet V4 R1 extracts (DOI 10.3334/ORNLDAAC/2129) via the ORNL DAAC single-pixel API and NASA CMR metadata, fetched without credentials; see NOTICE for data terms.",
+ "fixtures": [
+  {
+   "key": "GET cmr.earthdata.nasa.gov/search/granules.umm_json?collection_concept_id=C2531982907-ORNL_CLOUD&page_size=1&sort_key=-start_date",
+   "file": "cmr.earthdata.nasa.gov/cmr_latest_annual_200_c6e7973dc1.json",
+   "status": 200,
+   "contentType": "application/vnd.nasa.cmr.umm_results+json;version=1.6.7; charset=utf-8",
+   "transform": "shrunk: hits, items[0].meta.concept-id, umm.GranuleUR, umm.TemporalExtent",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET cmr.earthdata.nasa.gov/search/granules.umm_json?collection_concept_id=C2532007210-ORNL_CLOUD&page_size=1&sort_key=-start_date",
+   "file": "cmr.earthdata.nasa.gov/cmr_latest_monthly_200_630db2f1e3.json",
+   "status": 200,
+   "contentType": "application/vnd.nasa.cmr.umm_results+json;version=1.6.7; charset=utf-8",
+   "transform": "shrunk: hits, items[0].meta.concept-id, umm.GranuleUR, umm.TemporalExtent",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET cmr.earthdata.nasa.gov/search/granules.umm_json?collection_concept_id=C2532426483-ORNL_CLOUD&page_size=1&sort_key=-start_date",
+   "file": "cmr.earthdata.nasa.gov/cmr_latest_daily_200_733f127d48.json",
+   "status": 200,
+   "contentType": "application/vnd.nasa.cmr.umm_results+json;version=1.6.7; charset=utf-8",
+   "transform": "shrunk: hits, items[0].meta.concept-id, umm.GranuleUR, umm.TemporalExtent",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?end=2020-01-02&format=json&lat=35.805702&lon=-106.626365&start=2020-01-01&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp",
+   "file": "daymet.ornl.gov/pixel_ping_window_200_7ebf3555bc.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=21.300000&lon=-157.800000&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_hawaii_2020_200_1aabe89767.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=29.999776&lon=-130.004172&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_ocean_2020_400_20a51df505.json",
+   "status": 400,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.795614&lon=-106.636921&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3984_r5673_2020_200_9c376f62b0.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.796358&lon=-106.625452&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3985_r5673_2020_200_719fc2fa09.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.797101&lon=-106.613983&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3986_r5673_2020_200_3f9d9d52e2.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.804958&lon=-106.637836&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3984_r5672_2020_200_785596c7f5.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.805702&lon=-106.626365&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_dem_centre_2020_200_af8be6c3ae.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.805702&lon=-106.626365&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2026",
+   "file": "daymet.ornl.gov/pixel_unpublished_year_200_e49fdd01cf.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "truncated: kept yday 1-2 of 1980 and 1981",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.806446&lon=-106.614894&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3986_r5672_2020_200_e88add25af.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.814302&lon=-106.638750&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3984_r5671_2020_200_1002c4eaec.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.815046&lon=-106.627278&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3985_r5671_2020_200_73165d3f87.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET daymet.ornl.gov/single-pixel/api/data?format=json&lat=35.815790&lon=-106.615806&vars=dayl%2Cprcp%2Csrad%2Cswe%2Ctmax%2Ctmin%2Cvp&years=2020",
+   "file": "daymet.ornl.gov/pixel_mosaic_c3986_r5671_2020_200_53ce8df023.json",
+   "status": 200,
+   "contentType": "application/json",
+   "transform": "none",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET opendap.earthdata.nasa.gov/collections/C2532426483-ORNL_CLOUD/granules/Daymet_Daily_V4R1.daymet_v4_daily_na_tmax_2020.nc.dap.nc4?dap4.ce=%2Ftmax%5B0%3A1%3A364%5D%5B5671%3A1%3A5673%5D%5B3984%3A1%3A3986%5D%3B%2Fy%5B5671%3A1%3A5673%5D%3B%2Fx%5B3984%3A1%3A3986%5D",
+   "file": "opendap.earthdata.nasa.gov/edl_opendap_subset_302_c20278ae15.json",
+   "status": 302,
+   "contentType": "",
+   "transform": "body truncated to 500 chars",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET opendap.earthdata.nasa.gov/login/urs",
+   "file": "opendap.earthdata.nasa.gov/edl_hop1_302_d450f549b8.json",
+   "status": 302,
+   "contentType": "",
+   "transform": "body truncated to 500 chars",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET urs.earthdata.nasa.gov/oauth/authorize?client_id=SSCATdwCtNkEWliH3_WzDw&response_type=code&redirect_uri=https://opendap.earthdata.nasa.gov/login/urs",
+   "file": "urs.earthdata.nasa.gov/edl_hop2_401_6ef5110eb2.json",
+   "status": 401,
+   "contentType": "text/html; charset=utf-8",
+   "transform": "body truncated to 500 chars",
+   "origin": "recorded",
+   "recordedOn": "2026-11-15"
+  },
+  {
+   "key": "GET opendap.earthdata.nasa.gov/collections/C2532426483-ORNL_CLOUD/granules/Daymet_Daily_V4R1.daymet_v4_daily_na_tmax_2020.nc.dap.nc4?dap4.ce=%2Ftmax%5B0%3A1%3A364%5D%5B5671%3A1%3A5673%5D%5B3984%3A1%3A3986%5D%3B%2Fy%5B5671%3A1%3A5673%5D%3B%2Fx%5B3984%3A1%3A3986%5D",
+   "file": "synthetic/opendap_tmax_2020_3x3.nc4",
+   "status": 200,
+   "contentType": "application/x-netcdf4",
+   "transform": "hand-built; see scripts/make_synthetic_netcdf.py",
+   "origin": "synthetic",
+   "recordedOn": null
+  }
+ ]
+}
