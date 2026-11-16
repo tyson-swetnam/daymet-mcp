@@ -1,0 +1,53 @@
+# daymet-mcp documentation
+
+> daymet-mcp is a Model Context Protocol (MCP 2026-07-28) server that gives AI agents and the EEMT pipelines on-demand access to Daymet V4 R1 surface weather data (ORNL DAAC, DOI 10.3334/ORNLDAAC/2129): daily values at a point, monthly and annual summaries whose aggregation is explicit (prcp is a sum in mm/month and mm/year; the other variables are means), the 1 km Lambert Conformal Conic grid cell for a point, small-area grids, file downloads and citations. This documentation covers installation, client setup, Earthdata credentials, the tool catalogue, the MCP protocol surface, deployment and development. The source repository is an Open Knowledge Format (OKF v0.2) bundle: every page carries YAML frontmatter with type, provenance (generated/sources), and lifecycle (status/stale_after) fields.
+
+Full corpus for ingestion: https://tyson-swetnam.github.io/daymet-mcp/llms-full.txt
+
+Every page's Markdown source (OKF frontmatter included) is served at its URL plus `index.md` — for example https://tyson-swetnam.github.io/daymet-mcp/tools/aggregation/index.md. Agent guide: https://tyson-swetnam.github.io/daymet-mcp/about/ai-agents/
+
+If you want Daymet data rather than documentation, connect to the daymet-mcp server itself (stdio or Streamable HTTP) and call its tools; the agent guide explains how.
+
+## Getting started
+
+- [Connect an MCP client](https://tyson-swetnam.github.io/daymet-mcp/getting-started/clients/): Register daymet-mcp with Claude Code, Claude Desktop or any MCP client over stdio, or point a client at the HTTP endpoint.
+- [Configuration](https://tyson-swetnam.github.io/daymet-mcp/getting-started/configuration/): Every daymet-mcp setting with its environment variable, type and default; precedence is CLI flag, environment, YAML, default.
+- [Earthdata credentials](https://tyson-swetnam.github.io/daymet-mcp/getting-started/earthdata-credentials/): When daymet-mcp needs a NASA Earthdata token, how an operator sets it, and how the server keeps it out of logs and results. (draft)
+- [Install daymet-mcp](https://tyson-swetnam.github.io/daymet-mcp/getting-started/install/): Install daymet-mcp from a checkout with uv, as a uv tool, or as the container image, and check that it runs.
+- [Quickstart](https://tyson-swetnam.github.io/daymet-mcp/getting-started/quickstart/): Five tool calls that locate a Daymet cell, read daily data, total monthly precipitation and cite the dataset.
+
+## Tools
+
+- [Monthly and annual aggregation](https://tyson-swetnam.github.io/daymet-mcp/tools/aggregation/): Exactly how daymet-mcp turns daily Daymet values into monthly and annual values: sum versus mean, units, labels and calendar.
+- [Areas and downloads](https://tyson-swetnam.github.io/daymet-mcp/tools/areas-and-downloads/): Small-area Daymet grids returned in results or written to files, the two backends, and the limits that keep requests polite.
+- [Points and grid cells](https://tyson-swetnam.github.io/daymet-mcp/tools/points-and-cells/): How daymet-mcp maps a point to its 1 km Daymet cell and fetches daily values and summaries for that cell.
+- [Tool reference](https://tyson-swetnam.github.io/daymet-mcp/tools/reference/): Every daymet-mcp tool with its inputs, bounds, result fields, upstream endpoints and annotations, generated from the registry.
+- [Resources and prompts](https://tyson-swetnam.github.io/daymet-mcp/tools/resources-and-prompts/): The daymet:// guides and JSON references, the two resource templates, and the three task prompts daymet-mcp offers.
+
+## MCP protocol
+
+- [MCP 2026-07-28 conformance](https://tyson-swetnam.github.io/daymet-mcp/mcp/spec-2026-07-28/): How daymet-mcp implements the MCP 2026-07-28 stateless core: tools, structured output, annotations, errors, caching hints.
+- [Transports](https://tyson-swetnam.github.io/daymet-mcp/mcp/transports/): daymet-mcp speaks stdio for local clients and stateless Streamable HTTP at /mcp, with health and readiness endpoints.
+
+## Deploy
+
+- [Hosted HTTP deployment](https://tyson-swetnam.github.io/daymet-mcp/deploy/hosted-http/): Run the daymet-mcp container as a stateless HTTP service behind a TLS reverse proxy, with health checks and host settings.
+- [Security](https://tyson-swetnam.github.io/daymet-mcp/deploy/security/): The daymet-mcp security model: anonymous read-only access, no credentials over HTTP, downloads only over stdio.
+
+## Develop
+
+- [Adding a tool](https://tyson-swetnam.github.io/daymet-mcp/develop/adding-tools/): How to add a daymet-mcp tool: input and output models, registration rules, tests, and regenerating the tool reference.
+- [Architecture](https://tyson-swetnam.github.io/daymet-mcp/develop/architecture/): The daymet-mcp modules and how a tool call flows from the MCP adapter through the registry to the upstream client and cache.
+- [Contributing](https://tyson-swetnam.github.io/daymet-mcp/develop/contributing/): How to contribute to daymet-mcp: setup, the checks CI runs, code style, commit messages and the documentation rules.
+- [Testing](https://tyson-swetnam.github.io/daymet-mcp/develop/testing/): The daymet-mcp test suite: hermetic unit tests on recorded fixtures, MCP protocol tests, and network-marked live tests.
+
+## About
+
+- [For AI agents](https://tyson-swetnam.github.io/daymet-mcp/about/ai-agents/): How AI agents should use daymet-mcp: which tool to call first, how to read aggregation labels, and how to cite.
+- [Citing Daymet](https://tyson-swetnam.github.io/daymet-mcp/about/citing-daymet/): Which Daymet DOIs and method papers to cite for values that daymet-mcp retrieved or computed, with access dates.
+- [Using daymet-mcp with EEMT](https://tyson-swetnam.github.io/daymet-mcp/about/eemt/): How the EEMT pipelines and their developers use daymet-mcp to get Daymet tmin, tmax, prcp, vp and elevation on demand. (draft)
+- [License](https://tyson-swetnam.github.io/daymet-mcp/about/license/): daymet-mcp code is MIT-licensed, this documentation is CC BY 4.0, and Daymet data carry their own terms and citation rules.
+
+## Meta
+
+- [Documentation update log](https://tyson-swetnam.github.io/daymet-mcp/log/): dated history of changes to this bundle.

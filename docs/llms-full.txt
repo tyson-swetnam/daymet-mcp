@@ -1,0 +1,1266 @@
+# daymet-mcp documentation — full corpus
+
+Each page below begins with its canonical URL followed by its original Markdown, OKF frontmatter included.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/getting-started/clients/
+
+---
+title: "Connect an MCP client"
+description: "Register daymet-mcp with Claude Code, Claude Desktop or any MCP client over stdio, or point a client at the HTTP endpoint."
+type: Guide
+tags:
+  - clients
+  - stdio
+  - http
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: mcp-spec
+    resource: "https://modelcontextprotocol.io/specification/2026-07-28"
+    title: "Model Context Protocol specification 2026-07-28"
+    author: "team:modelcontextprotocol"
+status: stable
+---
+
+# Connect an MCP client
+
+## stdio (local)
+
+Claude Code:
+
+```bash
+claude mcp add daymet -s user -- uv --directory /path/to/daymet-mcp run daymet-mcp
+```
+
+Claude Desktop and other clients that read a JSON configuration:
+
+```json
+{
+  "mcpServers": {
+    "daymet": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/daymet-mcp", "run", "daymet-mcp"],
+      "env": {"DAYMET_MCP_DOWNLOADS__DIR": "/path/to/daymet-downloads"}
+    }
+  }
+}
+```
+
+Over stdio every tool is available, including `daymet_download_area`, which writes files under
+`downloads.dir`.
+
+## Streamable HTTP
+
+Start the server with `daymet-mcp --transport http` (default `127.0.0.1:8080`) and point the client
+at `http://127.0.0.1:8080/mcp`. Over HTTP the download tool is not offered and the Earthdata backend
+is off unless the operator enables it (see [Security](../deploy/security.md)).
+
+## From Python
+
+```python
+from mcp import Client, StdioServerParameters
+
+params = StdioServerParameters(command="uv", args=["run", "daymet-mcp"])
+async with Client(params) as client:
+    result = await client.call_tool("daymet_locate_cell", {"lat": 35.8, "lon": -106.6})
+```
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/getting-started/configuration/
+
+---
+title: "Configuration"
+description: "Every daymet-mcp setting with its environment variable, type and default; precedence is CLI flag, environment, YAML, default."
+type: Reference
+tags:
+  - configuration
+  - environment
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Configuration
+
+Precedence: **command-line flag > environment > YAML file (`--config`) > default**. Environment
+variables are `DAYMET_MCP_<SECTION>__<FIELD>`; `__` descends one level and list values are
+comma-separated. `.env` files are never loaded automatically (use `uv run --env-file .env`).
+
+```bash
+daymet-mcp --print-config         # effective configuration, token shown as "***"
+daymet-mcp --check                # offline self-test
+daymet-mcp --check --live         # plus one tiny live request
+```
+
+Configuration errors name the setting, never its value, and exit with code 2. The Earthdata token
+is accepted only from `DAYMET_MCP_EARTHDATA__TOKEN`; a `token` key in YAML is an error.
+
+## Settings
+
+<!-- BEGIN GENERATED CONFIG (scripts/gen_config_reference.py; do not edit) -->
+
+| Setting (YAML path) | Environment variable | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `server.transport` | `DAYMET_MCP_SERVER__TRANSPORT` | `stdio` \| `http` | `stdio` | stdio or http. |
+| `server.host` | `DAYMET_MCP_SERVER__HOST` | str | `127.0.0.1` | HTTP bind address. |
+| `server.port` | `DAYMET_MCP_SERVER__PORT` | int | `8080` | HTTP port. |
+| `server.public_base_url` | `DAYMET_MCP_SERVER__PUBLIC_BASE_URL` | str \| null | unset | Public URL when behind a proxy. |
+| `server.allowed_hosts` | `DAYMET_MCP_SERVER__ALLOWED_HOSTS` | list[str] | `[]` | Extra Host values accepted (DNS-rebinding guard). |
+| `server.allowed_origins` | `DAYMET_MCP_SERVER__ALLOWED_ORIGINS` | list[str] | `[]` | Extra Origin values accepted. |
+| `server.dns_rebinding_protection` | `DAYMET_MCP_SERVER__DNS_REBINDING_PROTECTION` | bool | `true` | Validate Host/Origin headers. |
+| `server.json_response` | `DAYMET_MCP_SERVER__JSON_RESPONSE` | bool | `true` | Plain JSON responses instead of SSE. |
+| `server.log_level` | `DAYMET_MCP_SERVER__LOG_LEVEL` | str | `INFO` | DEBUG, INFO, WARNING or ERROR. |
+| `server.instructions_extra` | `DAYMET_MCP_SERVER__INSTRUCTIONS_EXTRA` | str \| null | unset | Text appended to the server instructions. |
+| `daymet.single_pixel_url` | `DAYMET_MCP_DAYMET__SINGLE_PIXEL_URL` | str | `https://daymet.ornl.gov/single-pixel/api/data` | Single-pixel API endpoint. |
+| `daymet.cmr_url` | `DAYMET_MCP_DAYMET__CMR_URL` | str | `https://cmr.earthdata.nasa.gov/search` | CMR search root. |
+| `daymet.latest_year_fallback.daily` | `DAYMET_MCP_DAYMET__LATEST_YEAR_FALLBACK__DAILY` | int | `2025` | Latest daily year if CMR cannot be reached. |
+| `daymet.first_year` | `DAYMET_MCP_DAYMET__FIRST_YEAR` | int | `1980` | First year served (D8). |
+| `earthdata.token (env only)` | `DAYMET_MCP_EARTHDATA__TOKEN` | SecretStr \| null | unset | EDL user token; environment only (DAYMET_MCP_EARTHDATA__TOKEN). |
+| `earthdata.opendap_url` | `DAYMET_MCP_EARTHDATA__OPENDAP_URL` | str | `https://opendap.earthdata.nasa.gov/collections` | Hyrax OPeNDAP root. |
+| `earthdata.allow_in_http_mode` | `DAYMET_MCP_EARTHDATA__ALLOW_IN_HTTP_MODE` | bool | `false` | Let anonymous HTTP callers use the operator's token (D17). |
+| `cache.max_cell_years` | `DAYMET_MCP_CACHE__MAX_CELL_YEARS` | int | `20000` | In-memory cell-year entries. |
+| `cache.ttl_s.pixel` | `DAYMET_MCP_CACHE__TTL_S__PIXEL` | int | `604800` | Single-pixel cell-year TTL (s). |
+| `cache.ttl_s.cmr` | `DAYMET_MCP_CACHE__TTL_S__CMR` | int | `86400` | CMR latest-year TTL (s). |
+| `cache.stale_if_error_s` | `DAYMET_MCP_CACHE__STALE_IF_ERROR_S` | int | `86400` | Serve stale entries on errors (s). |
+| `cache.disk_dir` | `DAYMET_MCP_CACHE__DISK_DIR` | str \| null | unset | Optional gzip-JSON disk cache directory. |
+| `limits.max_result_bytes` | `DAYMET_MCP_LIMITS__MAX_RESULT_BYTES` | int | `50000` | Result budget (fixed). |
+| `limits.hard_max_result_bytes` | `DAYMET_MCP_LIMITS__HARD_MAX_RESULT_BYTES` | int | `200000` | Hard result cap (fixed). |
+| `limits.max_years_per_point` | `DAYMET_MCP_LIMITS__MAX_YEARS_PER_POINT` | int | `46` | Years per point call. |
+| `limits.pixel_mosaic_max_cells` | `DAYMET_MCP_LIMITS__PIXEL_MOSAIC_MAX_CELLS` | int | `121` | Cells via single-pixel. |
+| `limits.pixel_mosaic_max_cell_years` | `DAYMET_MCP_LIMITS__PIXEL_MOSAIC_MAX_CELL_YEARS` | int | `605` | Cell-years via single-pixel per call. |
+| `limits.earthdata_max_values` | `DAYMET_MCP_LIMITS__EARTHDATA_MAX_VALUES` | int | `25000000` | cells x days x variables (Earthdata). |
+| `limits.tool_timeout_s` | `DAYMET_MCP_LIMITS__TOOL_TIMEOUT_S` | float | `120.0` | Per-tool wall clock (s). |
+| `downloads.dir` | `DAYMET_MCP_DOWNLOADS__DIR` | str | `./daymet-downloads` | Download root (stdio only). |
+| `downloads.max_bytes` | `DAYMET_MCP_DOWNLOADS__MAX_BYTES` | int | `524288000` | Bytes per call. |
+
+<!-- END GENERATED CONFIG -->
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/getting-started/earthdata-credentials/
+
+---
+title: "Earthdata credentials"
+description: "When daymet-mcp needs a NASA Earthdata token, how an operator sets it, and how the server keeps it out of logs and results."
+type: Guide
+tags:
+  - earthdata
+  - credentials
+  - security
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: edl-tokens
+    resource: "https://urs.earthdata.nasa.gov/documentation/for_users/user_token"
+    title: "Earthdata Login user tokens"
+    author: "team:nasa-earthdata"
+  - id: research
+    resource: "RESEARCH.md"
+    title: "daymet-mcp research notes"
+    author: "team:daymet-mcp"
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: draft
+---
+
+# Earthdata credentials
+
+**Most uses need no credentials.** Points, monthly and annual summaries at a point, and areas up
+to 121 cells (and 605 cell-years) use the ORNL single-pixel API, which answers without a login.
+
+Larger areas need Daymet's gridded files. Every gridded endpoint tested (THREDDS/NCSS, OPeNDAP,
+HTTPS) redirected to NASA Earthdata Login and answered HTTP 401 without credentials, so daymet-mcp
+can read them only with an Earthdata Login (EDL) user token. **This backend is experimental: no
+credentialed request has been made yet**, and its NetCDF parser is tested only against a synthetic
+fixture.
+
+## Setting the token (operator)
+
+1. Create an Earthdata Login account and generate a user token in your EDL profile.
+2. Install the `grid` extra (`uv sync --extra grid`).
+3. Export the token before starting the server:
+
+```bash
+export DAYMET_MCP_EARTHDATA__TOKEN=...   # environment only
+uv run daymet-mcp
+```
+
+The token is **only** read from that environment variable. It is not accepted from command-line
+flags, YAML, tool arguments or HTTP headers, and the server never reads `~/.netrc` or cookie files.
+
+## What the server does with it
+
+* Sends it as `Authorization: Bearer` only to Earthdata hosts (`opendap.earthdata.nasa.gov`,
+  `urs.earthdata.nasa.gov`, `data.ornldaac.earthdata.nasa.gov`), never to `daymet.ornl.gov` or
+  CMR, and drops it on any redirect to another host.
+* Masks it in logs, error messages, results, download manifests and `--print-config`.
+* Over hosted HTTP the Earthdata backend is **off** unless the operator sets
+  `earthdata.allow_in_http_mode=true`; then every anonymous caller can spend the operator's quota.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/getting-started/install/
+
+---
+title: "Install daymet-mcp"
+description: "Install daymet-mcp from a checkout with uv, as a uv tool, or as the container image, and check that it runs."
+type: Guide
+tags:
+  - install
+  - uv
+  - docker
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Install daymet-mcp
+
+daymet-mcp needs Python 3.11 or newer. It has no GDAL or NumPy dependency unless you install the
+optional `grid` extra (Earthdata backend and NetCDF output).
+
+## From a checkout (development)
+
+```bash
+git clone <repository-url> daymet-mcp
+cd daymet-mcp
+uv sync                      # runtime + dev extras from the hashed uv.lock
+uv run daymet-mcp --version
+uv run daymet-mcp --check    # offline self-test: config and schemas
+```
+
+Add `--extra grid` to `uv sync` for the experimental Earthdata backend and NetCDF downloads.
+
+## As a uv tool
+
+```bash
+uv tool install ./daymet-mcp          # or a git URL once the repository is published
+daymet-mcp --check --live             # adds one tiny live single-pixel request
+```
+
+## Container image
+
+The `Dockerfile` builds a two-stage image from a digest-pinned `python:3.13-slim`, installs the
+locked dependencies with `uv sync --frozen --no-dev`, runs as uid 10001 and serves Streamable HTTP
+on port 8080.
+
+```bash
+docker build -t daymet-mcp:local .
+docker run --rm -p 127.0.0.1:8080:8080 daymet-mcp:local
+curl -s http://127.0.0.1:8080/healthz
+```
+
+The image can also run over stdio: `docker run --rm -i daymet-mcp:local daymet-mcp --transport stdio`.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/getting-started/quickstart/
+
+---
+title: "Quickstart"
+description: "Five tool calls that locate a Daymet cell, read daily data, total monthly precipitation and cite the dataset."
+type: Tutorial
+tags:
+  - quickstart
+  - tutorial
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+  - id: daily-guide
+    resource: "https://doi.org/10.3334/ORNLDAAC/2129"
+    title: "Daymet V4 R1 daily data user guide"
+    author: "team:ornl-daac"
+status: stable
+---
+
+# Quickstart
+
+The example point is the centre of the EEMT sample DEM in the Valles Caldera, New Mexico
+(35.802997, -106.624036).
+
+1. **Check the server**: `daymet_ping()` returns the version, protocol version and backends.
+2. **Locate the cell**: `daymet_locate_cell(lat=35.802997, lon=-106.624036)` returns column 3985,
+   row 5672 of the North America grid, the cell centre (x = -575250 m, y = -688000 m) and the
+   distance from the point to the centre (352.5 m).
+3. **Daily values**: `daymet_get_point_daily(lat=35.802997, lon=-106.624036, years=[2020])` returns
+   365 days. 2020 is a leap year, so February 29 is present and December 31 is not.
+4. **Monthly totals**: `daymet_get_point_summary(lat=35.802997, lon=-106.624036, period="monthly",
+   start_year=2020, end_year=2020, variables=["prcp"])` returns twelve values labelled
+   `prcp_monthly_total_mm`, with `aggregation: "sum"` and `units: "mm/month"`. December has
+   `dayCount: 30`.
+5. **Cite**: `daymet_get_citation()` returns the dataset, tool and method citations with DOIs and
+   BibTeX.
+
+The twelve monthly totals add up to the sum of the 365 daily values (to the 3-decimal rounding of
+each monthly value). The [aggregation page](../tools/aggregation.md) explains every rule.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/tools/aggregation/
+
+---
+title: "Monthly and annual aggregation"
+description: "Exactly how daymet-mcp turns daily Daymet values into monthly and annual values: sum versus mean, units, labels and calendar."
+type: Reference
+tags:
+  - aggregation
+  - precipitation
+  - calendar
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: daily-guide
+    resource: "https://doi.org/10.3334/ORNLDAAC/2129"
+    title: "Daymet V4 R1 daily data user guide"
+    author: "team:ornl-daac"
+  - id: monthly-guide
+    resource: "https://doi.org/10.3334/ORNLDAAC/2131"
+    title: "Daymet V4 R1 monthly climate summaries"
+    author: "team:ornl-daac"
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+stale_after: "2027-11-15T00:00:00Z"
+---
+
+# Monthly and annual aggregation
+
+daymet-mcp computes every monthly and annual value from Daymet **daily** data (DOI
+10.3334/ORNLDAAC/2129). Each summary series states its `aggregation`, its `units`, the daily units
+it came from, a `definition`, and a machine-readable `fieldLabel`.
+
+| Variable | Daily units | Monthly | Annual | Alternative |
+| --- | --- | --- | --- | --- |
+| prcp | mm/day | **sum**, mm/month (`prcp_monthly_total_mm`) | **sum**, mm/year (`prcp_annual_total_mm`) | none |
+| tmax | degC | mean, degC (`tmax_monthly_mean_degC`) | mean, degC | none |
+| tmin | degC | mean, degC (`tmin_monthly_mean_degC`) | mean, degC | none |
+| vp | Pa | mean, Pa (`vp_monthly_mean_Pa`) | mean, Pa | none |
+| swe | kg/m2 | mean, kg/m2 (`swe_monthly_mean_kg_m2`) | mean, kg/m2 | `last`: value on the last Daymet day of the period |
+| srad | W/m2 (daylight average) | mean, W/m2 (`srad_monthly_mean_W_m2`) | mean, W/m2 | `total`: sum of srad x dayl / 1e6, MJ/m2/month or MJ/m2/year |
+| dayl | s/day | mean, s/day (`dayl_monthly_mean_s`) | mean, s/day | none |
+
+**Monthly precipitation is the total of the daily values in the month (mm/month), never a mean.**
+The ORNL monthly product (DOI 10.3334/ORNLDAAC/2131) uses the same definitions for prcp, tmax,
+tmin, vp and swe; it has no srad or dayl and its latest year lags the daily product.
+
+Alternatives are opt-in with `aggregation_overrides`, for example `{"swe": "last", "srad":
+"total"}`; every other variable's aggregation is fixed.
+
+## Calendar
+
+Every Daymet year has 365 days: leap years keep February 29 and drop December 31. A leap-year
+December therefore has 30 days and its precipitation total covers December 1-30. Each period in a
+result reports `dayCount`, `firstDate` and `lastDate`. The server never imputes December 31, never
+rescales a sum to a nominal month length, and never fills gaps: a period with a missing daily value
+has `complete: false` and value `null`.
+
+## Rounding
+
+Daily values are rounded to 2 decimals (the precision of the Daymet CSV). Aggregates are computed
+from the unrounded upstream values and rounded to 3 decimals, so the sum of twelve monthly totals
+can differ from the sum of 365 rounded daily values by a few thousandths of a millimetre.
+
+## Provenance
+
+Every summary result lists the computed series in `source.derived` with the note "computed by
+daymet-mcp from Daymet daily V4 R1 (DOI 10.3334/ORNLDAAC/2129); not the ORNL monthly product
+(2131)". Cite DOI 2129 for these values.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/tools/areas-and-downloads/
+
+---
+title: "Areas and downloads"
+description: "Small-area Daymet grids returned in results or written to files, the two backends, and the limits that keep requests polite."
+type: Guide
+tags:
+  - areas
+  - downloads
+  - limits
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+  - id: research
+    resource: "RESEARCH.md"
+    title: "daymet-mcp research notes"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Areas and downloads
+
+`daymet_get_area` returns values for every Daymet cell whose centre falls inside a WGS84 bounding
+box, on the native 1 km grid (no resampling). Values are indexed `values[time][row][col]`, rows
+north to south. `temporal` is `daily`, `monthly` or `annual`, with the same aggregation rules as
+points. `include_elevation=true` adds the Daymet 1 km cell elevation from the single-pixel header.
+
+`daymet_download_area` (stdio only) writes the same grids under `downloads.dir`:
+
+* `aaigrid` (default): one ESRI ASCII grid plus `.prj` (Daymet LCC) per variable and period,
+  readable by GDAL and GRASS `r.in.gdal`;
+* `csv`: one long table;
+* `netcdf`: one file per variable and year (needs the `grid` extra).
+
+It also writes `manifest.json` with the request, backend, upstream endpoints, aggregation table,
+calendar, citations and the sha256 of every file. File names are deterministic; existing files are
+refused unless `overwrite=true`. Subfolders are confined to `downloads.dir`, and symbolic links are
+refused.
+
+## Backends and limits
+
+| Backend | When | Limit (default / ceiling) |
+| --- | --- | --- |
+| single-pixel mosaic | `auto` within the limits, or `single_pixel` | 121 / 400 cells; 605 / 2000 cell-years |
+| Earthdata OPeNDAP (experimental) | `auto` above the limits with a token, or `earthdata` | 25 million / 200 million values |
+
+The single-pixel mosaic sends one request per cell, at most 2 requests per second and 4 at a time.
+A request that exceeds a limit is refused before any upstream call with `query_too_large`, naming
+the limit and the requested amount. Above the limits without a token the answer is
+`auth_required`; see [Earthdata credentials](../getting-started/earthdata-credentials.md).
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/tools/points-and-cells/
+
+---
+title: "Points and grid cells"
+description: "How daymet-mcp maps a point to its 1 km Daymet cell and fetches daily values and summaries for that cell."
+type: Guide
+tags:
+  - points
+  - grid
+  - single-pixel
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: single-pixel
+    resource: "https://daymet.ornl.gov/web_services"
+    title: "Daymet single-pixel web service"
+    author: "team:ornl-daac"
+  - id: research
+    resource: "RESEARCH.md"
+    title: "daymet-mcp research notes"
+    author: "team:daymet-mcp"
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Points and grid cells
+
+## The grid
+
+Daymet uses a Lambert Conformal Conic projection
+(`+proj=lcc +lat_1=25 +lat_2=60 +lat_0=42.5 +lon_0=-100 +x_0=0 +y_0=0 +ellps=WGS84`). The North
+America grid has 7814 columns by 8075 rows of 1 km cells with centres at
+`x = -4560250 + 1000 * col` and `y = 4984000 - 1000 * row` metres. daymet-mcp projects points
+itself (a pure-Python implementation checked against values the single-pixel service reported and
+against pyproj) and snaps them to the cell whose centre is within 500 m in x and y.
+
+`daymet_locate_cell` does this offline. For Hawaii and Puerto Rico it returns the projected
+coordinates but no cell indices, because those mosaics' origins have not been verified.
+
+## Daily values and summaries
+
+`daymet_get_point_daily` and `daymet_get_point_summary` query the ORNL single-pixel API at the
+**cell centre**, always for all seven variables and whole years, and cache the result per cell and
+year; any nearby point in the same cell is served from the cache. The single-pixel API fails
+silently in several ways, so the server checks every response:
+
+* unknown variable names are ignored upstream, so variables are validated locally;
+* asking for an unpublished year returns the whole record with HTTP 200, so years are checked
+  against the latest year published in NASA CMR, and the years and row counts returned are
+  compared with the request;
+* the units in each column name (for example `prcp (mm/day)`, `vp (Pa)`) are compared with the
+  catalogue and never relabelled;
+* a point over water returns HTTP 400 "Daymet Tile was not found", reported as `not_found`
+  with reason `off_grid`.
+
+A date in the request must exist in the Daymet calendar: `2020-12-31` is refused with reason
+`not_in_daymet_calendar`.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/tools/reference/
+
+---
+title: "Tool reference"
+description: "Every daymet-mcp tool with its inputs, bounds, result fields, upstream endpoints and annotations, generated from the registry."
+type: MCP Tool Reference
+tags:
+  - tools
+  - reference
+generated:
+  by: "process:scripts/gen_tools_reference.py"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: registry
+    resource: "src/daymet_mcp/registry.py"
+    title: "daymet-mcp tool registry"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Tool reference
+
+Generated from the tool registry by `scripts/gen_tools_reference.py`; do not edit by hand. Every result also carries the envelope fields `resolved`, `notes`, `nextSteps` and `source`, and errors are tool results with `structuredContent.error = {code, message, details, hint?}`.
+
+| Tool | Title | Transports | Earthdata token |
+| --- | --- | --- | --- |
+| [`daymet_download_area`](#daymet_download_area) | Download a Daymet area to files | stdio | optional |
+| [`daymet_get_area`](#daymet_get_area) | Daymet grid for a small area | http, stdio | optional |
+| [`daymet_get_citation`](#daymet_get_citation) | Cite Daymet data | http, stdio | no |
+| [`daymet_get_point_daily`](#daymet_get_point_daily) | Daily Daymet values at a point | http, stdio | no |
+| [`daymet_get_point_summary`](#daymet_get_point_summary) | Monthly or annual Daymet summaries at a point | http, stdio | no |
+| [`daymet_list_variables`](#daymet_list_variables) | List Daymet variables and aggregation rules | http, stdio | no |
+| [`daymet_locate_cell`](#daymet_locate_cell) | Locate the Daymet grid cell | http, stdio | no |
+| [`daymet_ping`](#daymet_ping) | Ping daymet-mcp | http, stdio | no |
+
+## daymet_download_area
+
+**Download a Daymet area to files.** Write a small-area Daymet grid to files under the configured downloads.dir (stdio only): AAIGrid .asc+.prj per variable and time step (GDAL-readable), one CSV table, or NetCDF ([grid] extra). Same inputs and aggregation rules as daymet_get_area; writes manifest.json with sha256, URLs and citation. Next: import the files (e.g. r.in.gdal), then daymet_get_citation.
+
+- Surface: `area`; transports: stdio; Earthdata token: optional (large areas).
+- Annotations: readOnly=false, destructive=false, idempotent=true, openWorld=true.
+- Upstream: `GET daymet.ornl.gov/single-pixel/api/data`, `GET opendap.earthdata.nasa.gov/collections/{concept}/granules/{granule}.dap.nc4`.
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `bbox` | object (BBox) | yes |  |  | WGS84 bounding box in decimal degrees; every Daymet cell whose centre falls inside is included. |
+| `variables` | array of `dayl` \| `prcp` \| `srad` \| `swe` \| `tmax` \| `tmin` \| `vp` | yes |  | items >= 1 | Daymet variables (dayl, prcp, srad, swe, tmax, tmin, vp). |
+| `start_year` | integer | yes |  | >= 1980 | Year (inclusive). Max = latest published year (checked at call time). |
+| `end_year` | integer | yes |  | >= 1980 | Year (inclusive). Max = latest published year (checked at call time). |
+| `temporal` | `daily` \| `monthly` \| `annual` | yes |  |  | daily values, or monthly/annual summaries computed from daily data. |
+| `aggregation_overrides` | object (AggregationOverrides) \| null | no | `null` |  | Only swe (mean\|last) and srad (mean\|total) have alternatives. |
+| `include_elevation` | boolean | no | `false` |  | Add the Daymet 1 km cell elevation grid (m). |
+| `backend` | `auto` \| `single_pixel` \| `earthdata` | no | `"auto"` |  | auto = single_pixel when within its cell limit, else earthdata if a token is configured. |
+| `format` | `aaigrid` \| `csv` \| `netcdf` | no | `"aaigrid"` |  | aaigrid: one .asc+.prj per variable and time step (GDAL-readable, no extra deps); csv: one long table; netcdf: one file per variable and year (needs the [grid] extra). |
+| `subdir` | string \| null | no | `null` | pattern `^[A-Za-z0-9._-]{1,64}$` | Folder under the configured downloads.dir (default: derived from the request). |
+| `overwrite` | boolean | no | `false` |  | Replace existing files with the same names. |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `directory`, `files`, `grid`, `manifestPath`, `backend`, `cellsRequested`.
+
+## daymet_get_area
+
+**Daymet grid for a small area.** Daymet values on the native 1 km LCC grid for a small WGS84 bbox, returned in the result: daily values or monthly/annual summaries (prcp = sum mm/month, others = mean). values[time][row][col], rows north to south. Credential-free up to 121 cells via single-pixel; larger areas need an operator Earthdata token. Time axis paged. Next: call daymet_download_area for files, then daymet_get_citation.
+
+- Surface: `area`; transports: http, stdio; Earthdata token: optional (large areas).
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=true.
+- Upstream: `GET daymet.ornl.gov/single-pixel/api/data`, `GET opendap.earthdata.nasa.gov/collections/{concept}/granules/{granule}.dap.nc4`.
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `bbox` | object (BBox) | yes |  |  | WGS84 bounding box in decimal degrees; every Daymet cell whose centre falls inside is included. |
+| `variables` | array of `dayl` \| `prcp` \| `srad` \| `swe` \| `tmax` \| `tmin` \| `vp` | yes |  | items >= 1 | Daymet variables (dayl, prcp, srad, swe, tmax, tmin, vp). |
+| `start_year` | integer | yes |  | >= 1980 | Year (inclusive). Max = latest published year (checked at call time). |
+| `end_year` | integer | yes |  | >= 1980 | Year (inclusive). Max = latest published year (checked at call time). |
+| `temporal` | `daily` \| `monthly` \| `annual` | yes |  |  | daily values, or monthly/annual summaries computed from daily data. |
+| `aggregation_overrides` | object (AggregationOverrides) \| null | no | `null` |  | Only swe (mean\|last) and srad (mean\|total) have alternatives. |
+| `include_elevation` | boolean | no | `false` |  | Add the Daymet 1 km cell elevation grid (m). |
+| `backend` | `auto` \| `single_pixel` \| `earthdata` | no | `"auto"` |  | auto = single_pixel when within its cell limit, else earthdata if a token is configured. |
+| `offset` | integer | no | `0` | >= 0 | Index of the first time step to return. |
+| `limit` | integer | no | `366` | >= 1; <= 1000 | Max time steps to return. |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `grid`, `time`, `series`, `elevationM`, `backend`, `cellsRequested`, `calendar`, `page`.
+
+## daymet_get_citation
+
+**Cite Daymet data.** Citation text, DOI and BibTeX for Daymet V4 R1 data: the dataset (required; server-computed monthly/annual values cite the daily product 2129), the single-pixel tool when used (required), and method papers (recommended; extra ones for srad/vp). No network. Next: paste the citations into your methods section.
+
+- Surface: `citation`; transports: http, stdio; Earthdata token: no.
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=false.
+- Upstream: none (local).
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `products` | array of `daily` \| `monthly` \| `annual` | no |  |  | Products the values came from. Server-computed monthly/annual values come from the daily product, so cite 'daily' for them. |
+| `access` | array of `single_pixel` \| `earthdata` | no |  |  | How the data were retrieved (adds the single-pixel tool citation). |
+| `variables` | array of `dayl` \| `prcp` \| `srad` \| `swe` \| `tmax` \| `tmin` \| `vp` \| null | no | `null` | items >= 1 | Daymet variables (dayl, prcp, srad, swe, tmax, tmin, vp). Default: all seven. |
+| `include_method_papers` | boolean | no | `true` |  | Add the recommended method papers. |
+| `accessed_on` | string \| null | no | `null` |  | Access date. Default: today (UTC). |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `citations`, `accessedOn`, `dataPolicyUrl`.
+
+## daymet_get_point_daily
+
+**Daily Daymet values at a point.** Daily Daymet V4 R1 values (dayl, prcp, srad, swe, tmax, tmin, vp) for the 1 km cell containing a point, via the credential-free ORNL single-pixel API. Give whole years or a start/end date. Units sit next to every series; years have 365 days (leap years drop Dec 31). Paged by offset/limit. Next: call daymet_get_point_summary for monthly totals/means, then daymet_get_citation.
+
+- Surface: `point`; transports: http, stdio; Earthdata token: no.
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=true.
+- Upstream: `GET daymet.ornl.gov/single-pixel/api/data`.
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `lat` | number | yes |  | >= -90; <= 90 | Latitude, decimal degrees WGS84. |
+| `lon` | number | yes |  | >= -180; <= 180 | Longitude, decimal degrees WGS84 (west negative). |
+| `variables` | array of `dayl` \| `prcp` \| `srad` \| `swe` \| `tmax` \| `tmin` \| `vp` \| null | no | `null` | items >= 1 | Daymet variables (dayl, prcp, srad, swe, tmax, tmin, vp). Default: all seven. |
+| `years` | array of integer \| null | no | `null` | items >= 1; items <= 46 | Whole years. Give either years or start_date+end_date. |
+| `start_date` | string \| null | no | `null` |  | YYYY-MM-DD, inclusive; must exist in the Daymet calendar. |
+| `end_date` | string \| null | no | `null` |  | YYYY-MM-DD, inclusive. |
+| `offset` | integer | no | `0` | >= 0 | Index of the first time step to return. |
+| `limit` | integer | no | `366` | >= 1; <= 1000 | Max time steps to return. |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `location`, `calendar`, `dataVersion`, `doi`, `time`, `series`, `page`.
+
+## daymet_get_point_summary
+
+**Monthly or annual Daymet summaries at a point.** Monthly or annual summaries computed from Daymet daily data at a point. prcp is a SUM (mm/month, mm/year); tmax, tmin, vp, swe, srad and dayl are MEANS of daily values (swe 'last' and srad 'total' MJ/m2 on request). Every series states its aggregation, units and a field label such as prcp_monthly_total_mm. Covers the latest daily year. Next: call daymet_get_citation.
+
+- Surface: `point`; transports: http, stdio; Earthdata token: no.
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=true.
+- Upstream: `GET daymet.ornl.gov/single-pixel/api/data`.
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `lat` | number | yes |  | >= -90; <= 90 | Latitude, decimal degrees WGS84. |
+| `lon` | number | yes |  | >= -180; <= 180 | Longitude, decimal degrees WGS84 (west negative). |
+| `variables` | array of `dayl` \| `prcp` \| `srad` \| `swe` \| `tmax` \| `tmin` \| `vp` \| null | no | `null` | items >= 1 | Daymet variables (dayl, prcp, srad, swe, tmax, tmin, vp). Default: all seven. |
+| `period` | `monthly` \| `annual` | yes |  |  | monthly = calendar months; annual = Daymet 365-day year. |
+| `start_year` | integer | yes |  | >= 1980 | Year (inclusive). Max = latest published year (checked at call time). |
+| `end_year` | integer | yes |  | >= 1980 | Year (inclusive). Max = latest published year (checked at call time). |
+| `months` | array of integer \| null | no | `null` |  | Optional month filter 1-12 (monthly only). |
+| `aggregation_overrides` | object (AggregationOverrides) \| null | no | `null` |  | Only swe and srad have alternatives; every other variable's aggregation is fixed (see daymet_list_variables). |
+| `offset` | integer | no | `0` | >= 0 | Index of the first time step to return. |
+| `limit` | integer | no | `366` | >= 1; <= 1000 | Max time steps to return. |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `location`, `calendar`, `dataVersion`, `doi`, `period`, `periods`, `series`, `page`.
+
+## daymet_list_variables
+
+**List Daymet variables and aggregation rules.** List Daymet V4 R1 variables with daily units and the exact monthly/annual aggregation the server uses (prcp = sum, others = mean), regions, year ranges, the 365-day calendar and collection DOIs. Next: call daymet_get_point_summary or daymet_locate_cell.
+
+- Surface: `catalog`; transports: http, stdio; Earthdata token: no.
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=true.
+- Upstream: `GET cmr.earthdata.nasa.gov/search/granules.umm_json`.
+
+No arguments.
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `variables`, `regions`, `calendar`, `collections`, `grid`.
+
+## daymet_locate_cell
+
+**Locate the Daymet grid cell.** Map a WGS84 lat/lon to Daymet's Lambert Conformal Conic projection and the 1 km grid cell that contains it (column, row, cell-centre x/y and lat/lon, distance to centre). Pure computation; no network. Next: call daymet_get_point_daily or daymet_get_point_summary for that point.
+
+- Surface: `cell`; transports: http, stdio; Earthdata token: no.
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=false.
+- Upstream: none (local).
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `lat` | number | yes |  | >= -90; <= 90 | Latitude, decimal degrees WGS84. |
+| `lon` | number | yes |  | >= -180; <= 180 | Longitude, decimal degrees WGS84 (west negative). |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `region`, `inCoverage`, `query`, `cell`, `crs`, `gridDefinition`.
+
+## daymet_ping
+
+**Ping daymet-mcp.** Report the daymet-mcp version, MCP protocol version, transport and which backends are usable (single-pixel always; Earthdata only with an operator token). With check_upstream=true it makes one tiny live single-pixel request and reports latency. Next: call daymet_list_variables to see variables, units and aggregation rules.
+
+- Surface: `core`; transports: http, stdio; Earthdata token: no.
+- Annotations: readOnly=true, destructive=false, idempotent=true, openWorld=true.
+- Upstream: `GET daymet.ornl.gov/single-pixel/api/data`.
+
+| Argument | Type | Required | Default | Bounds | Description |
+| --- | --- | --- | --- | --- | --- |
+| `check_upstream` | boolean | no | `false` |  | Also make one tiny live single-pixel request (2-day window). |
+
+Result fields: `resolved`, `notes`, `nextSteps`, `source`, `server`, `backends`, `upstream`.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/tools/resources-and-prompts/
+
+---
+title: "Resources and prompts"
+description: "The daymet:// guides and JSON references, the two resource templates, and the three task prompts daymet-mcp offers."
+type: Reference
+tags:
+  - resources
+  - prompts
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Resources and prompts
+
+## Resources
+
+| URI | Content |
+| --- | --- |
+| `daymet://guide/overview` | What Daymet is, the backends, when credentials are needed |
+| `daymet://guide/aggregation` | The aggregation rules (monthly prcp is a total, mm/month) |
+| `daymet://guide/citing-daymet` | Citation templates used by `daymet_get_citation` |
+| `daymet://guide/earthdata-credentials` | How an operator sets an Earthdata token |
+| `daymet://reference/variables` | The variable and aggregation table (JSON) |
+| `daymet://reference/grid` | proj4, ESRI WKT, the NA grid definition and region bboxes (JSON) |
+| `daymet://cell/{lat}/{lon}` | Template: the cell containing a point |
+| `daymet://point/{lat}/{lon}/monthly/{year}` | Template: monthly summaries of all variables for a year |
+
+An unknown URI returns JSON-RPC error `-32602` with `data.code = "not_found"` and `didYouMean`.
+
+## Prompts
+
+* `daymet_site_climate(lat, lon, start_year, end_year)`: locate the cell, summarise monthly
+  climate (precipitation as totals, the rest as means) and cite.
+* `daymet_eemt_inputs(west, south, east, north, year)`: download monthly tmin, tmax, prcp and vp
+  grids plus elevation for an EEMT domain.
+* `daymet_monthly_precip_check(lat, lon, year)`: show daily precipitation and monthly totals
+  side by side and explain sum versus mean.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/mcp/spec-2026-07-28/
+
+---
+title: "MCP 2026-07-28 conformance"
+description: "How daymet-mcp implements the MCP 2026-07-28 stateless core: tools, structured output, annotations, errors, caching hints."
+type: Reference
+tags:
+  - mcp
+  - specification
+  - conformance
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: mcp-spec
+    resource: "https://modelcontextprotocol.io/specification/2026-07-28"
+    title: "Model Context Protocol specification 2026-07-28"
+    author: "team:modelcontextprotocol"
+  - id: neon-mcp
+    resource: "https://github.com/idss-mesa/neon-mcp"
+    title: "idss-mesa/neon-mcp reference server"
+    author: "team:idss-mesa"
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+stale_after: "2027-07-28T00:00:00Z"
+---
+
+# MCP 2026-07-28 conformance
+
+daymet-mcp targets the MCP 2026-07-28 specification (stateless core) with the Python `mcp` SDK 2.x
+low-level `Server`. The protocol version is taken from the SDK
+(`mcp.types.LATEST_PROTOCOL_VERSION`), never written as a literal.
+
+| Feature | How daymet-mcp uses it |
+| --- | --- |
+| Tools | 8 tools, sorted by name; `daymet_download_area` only over stdio |
+| Structured output | Every tool declares an `outputSchema` (JSON Schema 2020-12) and returns the same compact JSON as text and as `structuredContent` |
+| Annotations | `title` plus all four hints on every tool |
+| Tool `_meta` | `io.daymet-mcp/surface`, `endpoints`, `stdioOnly`, `requiresToken` |
+| Result `_meta` | `io.daymet-mcp/upstream` (`requests`, `cacheHits`, `backend`, ...) next to the SDK's server info |
+| Errors | Tool failures are results with `isError: true` and `structuredContent.error = {code, message, details, hint?}`; only protocol faults are JSON-RPC errors |
+| Size | Results are trimmed to 50 000 bytes along the time axis (`page.truncatedReason = "budget"`); 200 000 bytes is a hard cap |
+| Paging | `offset`/`limit` inputs and a `page` object, not MCP cursors |
+| Cache hints | public; tools/list 5 min, resources 1 h, prompts/list 24 h, server/discover 5 min |
+| Not used | sampling, roots, logging/setLevel, elicitation, progress, sessions, legacy SSE |
+
+## Tests
+
+`tests/test_spec_conformance_2026_07_28.py` drives the server through the SDK client: the tool list
+is sorted and size-bounded, every schema validates as JSON Schema 2020-12, every tool is called and
+its `structuredContent` validates against its `outputSchema`, text equals structured content,
+annotations and `_meta` are present, and unknown resources give `-32602` with `didYouMean`. The
+transport tests repeat the calls over a real stdio subprocess and a real HTTP server.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/mcp/transports/
+
+---
+title: "Transports"
+description: "daymet-mcp speaks stdio for local clients and stateless Streamable HTTP at /mcp, with health and readiness endpoints."
+type: Reference
+tags:
+  - transports
+  - stdio
+  - http
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: mcp-spec
+    resource: "https://modelcontextprotocol.io/specification/2026-07-28"
+    title: "Model Context Protocol specification 2026-07-28"
+    author: "team:modelcontextprotocol"
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Transports
+
+## stdio (default)
+
+`daymet-mcp` with no arguments serves MCP over stdin/stdout. Logs go to stderr; stdout carries
+only protocol messages (a test checks this). All eight tools are available.
+
+## Stateless Streamable HTTP
+
+`daymet-mcp --transport http [--host 127.0.0.1] [--port 8080]` serves:
+
+| Path | Behaviour |
+| --- | --- |
+| `POST /mcp` | MCP JSON-RPC, stateless (no session header), JSON responses, 1 MiB body cap |
+| `GET`, `DELETE /mcp` | 405 with `Allow: POST` |
+| `GET /healthz` | `{"status":"ok","version","protocolVersion","transport":"http"}` |
+| `GET /readyz` | 503 while the CMR latest-year lookup warms up, then `{"status":"ready","degraded":false}` (`degraded: true` if CMR failed) |
+
+Host and Origin headers are checked against `127.0.0.1`, `localhost`, the bind host and any
+`server.allowed_hosts` / `server.allowed_origins` / `server.public_base_url` (DNS-rebinding
+protection). Every response carries `x-request-id`.
+
+Over HTTP `daymet_download_area` is not listed and a call to it returns
+`not_available_in_http_mode`; the Earthdata backend is off unless
+`earthdata.allow_in_http_mode=true`.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/deploy/hosted-http/
+
+---
+title: "Hosted HTTP deployment"
+description: "Run the daymet-mcp container as a stateless HTTP service behind a TLS reverse proxy, with health checks and host settings."
+type: Guide
+tags:
+  - deploy
+  - docker
+  - http
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Hosted HTTP deployment
+
+The image listens on `0.0.0.0:8080` inside the container, runs as uid 10001 and has a
+`HEALTHCHECK` on `/healthz`. `docker-compose.yml` publishes it on `127.0.0.1:8080` only.
+
+```bash
+docker compose up -d
+curl -s http://127.0.0.1:8080/healthz
+```
+
+Behind a reverse proxy, set the public URL so Host/Origin checks accept it:
+
+```bash
+DAYMET_MCP_SERVER__PUBLIC_BASE_URL=https://daymet-mcp.example.org
+```
+
+The server is stateless: run several replicas behind a load balancer without session affinity.
+Each replica keeps its own in-memory cache; set `cache.disk_dir` to a volume to share cached
+cell-years across restarts.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/deploy/security/
+
+---
+title: "Security"
+description: "The daymet-mcp security model: anonymous read-only access, no credentials over HTTP, downloads only over stdio."
+type: Policy
+tags:
+  - security
+  - credentials
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Security
+
+* **No user data, no OAuth.** Hosted daymet-mcp offers anonymous read access to public data.
+  Deployers who need access control put it behind a reverse proxy that authenticates.
+* **No credentials over the wire.** The Earthdata token comes only from the operator's environment
+  (`DAYMET_MCP_EARTHDATA__TOKEN`); no tool argument or HTTP header carries one. The token is sent
+  only to Earthdata hosts and is masked in logs, errors, results and manifests.
+* **Earthdata over HTTP is off by default.** With `earthdata.allow_in_http_mode=true` every
+  anonymous caller can use the operator's Earthdata quota.
+* **No disk writes over HTTP.** `daymet_download_area` exists only over stdio, writes only under
+  `downloads.dir` and refuses symbolic links and paths that leave it.
+* **Outbound requests** go only to an allow-list of HTTPS hosts (`daymet.ornl.gov`,
+  `cmr.earthdata.nasa.gov` and three Earthdata hosts), GET only, with a generic User-Agent and local
+  rate limits.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/develop/adding-tools/
+
+---
+title: "Adding a tool"
+description: "How to add a daymet-mcp tool: input and output models, registration rules, tests, and regenerating the tool reference."
+type: Guide
+tags:
+  - develop
+  - tools
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Adding a tool
+
+1. **Models** in `src/daymet_mcp/models/`: an input model subclassing `DaymetInput` (every field
+   described; unknown fields are rejected) and an output model subclassing `ToolResultBase`.
+   Nullable output fields need a default so the dumped result matches its `outputSchema`.
+2. **Handler** in `src/daymet_mcp/tools/<family>.py`:
+
+```python
+@register_tool(
+    "daymet_example",
+    title="Example",
+    description="What it returns, in at most 600 characters. Next: call daymet_get_citation.",
+    input_model=ExampleInput,
+    output_model=ExampleOutput,
+    surface="point",
+    endpoints=[ENDPOINT],
+)
+async def daymet_example(args: ExampleInput, ctx: ToolContext) -> ExampleOutput: ...
+```
+
+   Names match `^daymet_[a-z_]+$`; descriptions end with a `Next:` sentence; `nextSteps` must not
+   be empty and data tools end it with `daymet_get_citation`.
+3. **Tests**: a hermetic test in `tests/tools/` (through `call_ok`/`call_err`), a live test in
+   `tests/live/test_live.py`, and an entry in `tests/helpers.EVERY_TOOL_CALL` so the protocol tests
+   call it. `tests/test_integration_meta.py` fails otherwise.
+4. **Docs**: `python scripts/gen_tools_reference.py` and `python scripts/gen_llms_txt.py`, then a
+   `docs/log.md` entry.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/develop/architecture/
+
+---
+title: "Architecture"
+description: "The daymet-mcp modules and how a tool call flows from the MCP adapter through the registry to the upstream client and cache."
+type: Reference
+tags:
+  - architecture
+  - develop
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+  - id: neon-mcp
+    resource: "https://github.com/idss-mesa/neon-mcp"
+    title: "idss-mesa/neon-mcp reference server"
+    author: "team:idss-mesa"
+status: stable
+---
+
+# Architecture
+
+```
+src/daymet_mcp/
+  server.py        the only module that imports the MCP SDK server API
+  registry.py      @register_tool, validation, timeout, size budget
+  tools/           one module per tool family; handlers are async (args, ctx) -> OutputModel
+  models/          pydantic inputs (snake_case, extra=forbid) and outputs (camelCase)
+  daymet/
+    client.py      one httpx.AsyncClient: host allow-list, manual redirects, retries
+    ratelimit.py   token buckets per host group
+    cache.py       TTL + LRU, single flight, stale-if-error, optional disk layer
+    catalog.py     variables, aggregation rules, regions, collections, grid
+    calendar.py    the 365-day Daymet calendar
+    lcc.py         pure-Python Lambert Conformal Conic and grid snapping
+    single_pixel.py  request builder, parser and silent-failure guards
+    cmr.py         latest published year per product
+    aggregate.py   monthly and annual reductions
+    earthdata.py   experimental OPeNDAP subsetting ([grid] extra)
+    writers.py     AAIGrid + .prj, CSV, NetCDF
+  resources.py, prompts.py, instructions.py
+  transport/       stdio, stateless Streamable HTTP, /healthz and /readyz
+```
+
+A call arrives at `server.py`, which builds a per-call context (config, services, transport,
+upstream statistics) and hands it to `registry.invoke`. The registry validates arguments against
+the input model, runs the handler under the per-tool timeout, maps upstream failures onto the
+error vocabulary, dumps the result model, trims it to the size budget and returns it; the adapter
+wraps it as text plus `structuredContent` with `io.daymet-mcp/upstream` in `_meta`.
+
+The layout, registry, envelope, error model and transports follow
+[idss-mesa/neon-mcp](https://github.com/idss-mesa/neon-mcp){target=_blank}; `DESIGN.md` records
+every decision (D1-D21).
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/develop/contributing/
+
+---
+title: "Contributing"
+description: "How to contribute to daymet-mcp: setup, the checks CI runs, code style, commit messages and the documentation rules."
+type: Guide
+tags:
+  - contributing
+  - ci
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Contributing
+
+```bash
+uv sync --all-extras
+uv run ruff check src tests scripts && uv run ruff format --check src tests scripts
+uv run mypy src
+uv run pytest
+python scripts/okf_validate.py docs
+python scripts/gen_tools_reference.py --check && python scripts/gen_config_reference.py --check
+```
+
+* Python 3.11+, full type hints, `mypy --strict`, ruff rules `E,F,I,UP,B,SIM,S,RUF`, line length 100.
+* Every source file starts with SPDX lines (`SPDX-FileCopyrightText`, `SPDX-License-Identifier: MIT`).
+* Commit subjects start with `FIX:`, `FEATURE:`, `REFACTOR:`, `DOCS:`, `CLEANUP:`, `MODERNIZE:` or
+  `UPDATE:`; the body says what changed, why, and how it was tested.
+* CI (`.github/workflows/ci.yml`, actions pinned by commit SHA) runs lint, type checks and tests on
+  Python 3.11-3.13, a conformance job, the docs checks, and a nightly live job.
+* Documentation pages carry OKF frontmatter; see `AGENTS.md` for the rules.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/develop/testing/
+
+---
+title: "Testing"
+description: "The daymet-mcp test suite: hermetic unit tests on recorded fixtures, MCP protocol tests, and network-marked live tests."
+type: Guide
+tags:
+  - testing
+  - fixtures
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# Testing
+
+```bash
+uv run pytest                       # hermetic: no network (the 'network' marker is deselected)
+uv run pytest -m network tests/live # live tests against the real services
+uv run python scripts/record_fixtures.py check
+```
+
+* **Hermetic by default.** `tests/fixture_router.py` is an `httpx.MockTransport` that replays the
+  fixtures in `tests/fixtures/<host>/` and fails the test on any request it has no fixture for.
+* **Fixtures** were recorded from real GETs without credentials (`scripts/record_fixtures.py
+  record`): single-pixel 2020 (a leap year) at the EEMT sample DEM centre and in Hawaii, a 3x3
+  mosaic, a 2-day window, an off-grid point, the unpublished-year response (truncated), CMR
+  latest-granule pages and the Earthdata redirect chain. The NetCDF subset under
+  `tests/fixtures/synthetic/` is **synthetic** (no subset can be recorded without credentials).
+* **Science tests**: calendar, LCC against service-reported coordinates and pyproj, aggregation
+  golden values from the fixture computed by an independent loop, and property tests (annual sum
+  equals the sum of monthly sums).
+* **Protocol tests**: the SDK client in-process, against a real stdio subprocess, and against a
+  real HTTP server on 127.0.0.1, calling every tool.
+* **Live tests** (marker `network`): one per tool, comparing values with the fixtures to detect
+  revisions; `-m "network and edl"` needs `DAYMET_MCP_EARTHDATA__TOKEN`.
+
+Coverage must stay at or above 85 %; `mypy --strict src` and `ruff check` must be clean.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/about/ai-agents/
+
+---
+title: "For AI agents"
+description: "How AI agents should use daymet-mcp: which tool to call first, how to read aggregation labels, and how to cite."
+type: Guide
+tags:
+  - agents
+  - llms
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: stable
+---
+
+# For AI agents
+
+* For Daymet **data**, connect to the daymet-mcp server and call its tools; do not scrape these
+  pages. Start with `daymet_list_variables` or `daymet_locate_cell`.
+* Read `aggregation`, `units` and `fieldLabel` on every summary series. Monthly and annual `prcp`
+  are **sums** (`prcp_monthly_total_mm`); never describe them as averages.
+* Every Daymet year has 365 days; leap years have no December 31.
+* Follow `nextSteps` in results; data tools end with `daymet_get_citation`. Include the citations
+  and the access date when you report values.
+* If a result has `page.truncated: true`, call again with `offset = page.nextOffset`.
+* Errors are tool results with `error.code`; `query_too_large` and `auth_required` name the limit
+  and a smaller alternative.
+* The documentation corpus is at `llms.txt` and `llms-full.txt`; any page URL plus `index.md`
+  returns its Markdown source. Pages without `verified:` are unverified.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/about/citing-daymet/
+
+---
+title: "Citing Daymet"
+description: "Which Daymet DOIs and method papers to cite for values that daymet-mcp retrieved or computed, with access dates."
+type: Policy
+tags:
+  - citation
+  - doi
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: daymet-citations
+    resource: "https://daymet.ornl.gov/citations"
+    title: "Daymet citation guidance"
+    author: "team:ornl-daac"
+  - id: daily-guide
+    resource: "https://doi.org/10.3334/ORNLDAAC/2129"
+    title: "Daymet V4 R1 daily data user guide"
+    author: "team:ornl-daac"
+status: stable
+---
+
+# Citing Daymet
+
+`daymet_get_citation` renders these citations with DOIs and BibTeX; the templates live in
+`daymet://guide/citing-daymet`.
+
+* **Dataset (required)**: Thornton, M.M., R. Shrestha, Y. Wei, P.E. Thornton, and S-C. Kao. 2022.
+  Daymet: Daily Surface Weather Data on a 1-km Grid for North America, Version 4 R1. ORNL DAAC.
+  https://doi.org/10.3334/ORNLDAAC/2129. Monthly and annual values computed by daymet-mcp come from
+  the daily product and cite this DOI, not the ORNL monthly (2131) or annual (2130) products.
+* **Tool (required when the single-pixel API was used)**: Thornton, M.M., and R. Devarakonda.
+  2011. Daymet Single Pixel Extraction Tool. https://doi.org/10.3334/ORNLDAAC/2361.
+* **Method (recommended)**: Thornton et al. 2021, Scientific Data 8:190,
+  https://doi.org/10.1038/s41597-021-00973-0; with srad or vp also Thornton et al. 2000 and
+  Thornton and Running 1999.
+
+The citation embedded in single-pixel responses adds B.E. Wilson as an author; the user guide
+does not, and daymet-mcp uses the user-guide form. All Daymet data are provisional and subject to
+revision, so record the access date.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/about/eemt/
+
+---
+title: "Using daymet-mcp with EEMT"
+description: "How the EEMT pipelines and their developers use daymet-mcp to get Daymet tmin, tmax, prcp, vp and elevation on demand."
+type: Guide
+tags:
+  - eemt
+  - workflow
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: design
+    resource: "DESIGN.md"
+    title: "daymet-mcp design"
+    author: "team:daymet-mcp"
+status: draft
+---
+
+# Using daymet-mcp with EEMT
+
+The Effective Energy and Mass Transfer (EEMT) pipeline reads Daymet `tmin`, `tmax`, `prcp` and `vp`
+per period and the Daymet 1 km DEM for its lapse-rate correction. daymet-mcp provides all of them
+with the aggregation stated: **monthly prcp is a total of daily values (mm/month)**, matching the
+pipeline's definition; tmin, tmax and vp are monthly means.
+
+* **Interactive work**: add daymet-mcp to your MCP client and call `daymet_locate_cell`,
+  `daymet_get_point_summary(period="monthly")` and `daymet_get_citation`, or use the
+  `daymet_eemt_inputs` prompt.
+* **Pipeline (proposed, not yet implemented in EEMT)**: a small adapter starts `daymet-mcp` over
+  stdio with the MCP Python SDK and calls `daymet_download_area` with `temporal="monthly"`,
+  `variables=["tmin","tmax","prcp","vp"]`, `include_elevation=true`, `format="aaigrid"` and the DEM
+  bounding box plus a 2-cell buffer. The `.asc` + `.prj` files are GDAL-readable; importing them
+  with `r.in.gdal` inside the EEMT container has not been tested yet. The adapter copies
+  `manifest.json` into the job's provenance.
+* **Grids stay native**: values come on the 1 km Lambert Conformal Conic grid; reprojection to the
+  DEM stays in EEMT.
+* **CI**: EEMT keeps its own committed fixture and never needs the network or daymet-mcp.
+
+The EEMT sample DEM needs a 7x7 cell area with a 2-cell buffer, well inside the credential-free
+limit of 121 cells.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/about/license/
+
+---
+title: "License"
+description: "daymet-mcp code is MIT-licensed, this documentation is CC BY 4.0, and Daymet data carry their own terms and citation rules."
+type: Policy
+tags:
+  - license
+  - MIT
+generated:
+  by: "claude/opus-5.5"
+  at: "2026-11-15T00:00:00Z"
+sources:
+  - id: daymet-citations
+    resource: "https://daymet.ornl.gov/citations"
+    title: "Daymet citation guidance"
+    author: "team:ornl-daac"
+status: stable
+---
+
+# License
+
+* **Code**: MIT (see `LICENSE`). Parts are adapted from idss-mesa/neon-mcp (MIT, The Regents of
+  the University of New Mexico); `NOTICE` lists them. The copyright holder of daymet-mcp is an open
+  owner decision.
+* **Documentation**: CC BY 4.0.
+* **Daymet data** are not covered by the MIT licence. Sources disagree on the exact terms (the NASA
+  Earth Science Data and Information Policy; CC BY 4.0 in the AWS Open Data registry); all ask
+  for the DOI citation. See [Citing Daymet](citing-daymet.md). The small Daymet extracts committed
+  as test fixtures are attributed in `NOTICE`.
+
+---8<--- https://tyson-swetnam.github.io/daymet-mcp/log/
+
+# Directory Update Log
+
+## 2026-11-15
+
+* **Creation**: Established the daymet-mcp documentation bundle (OKF v0.2): root [index](index.md), this log, the Zensical configuration, the vendored OKF validator, the `llms.txt` generator and the post-build agent surface.
+* **Creation**: [Getting started](getting-started/index.md), [Tools](tools/index.md) (with the generated [Tool reference](tools/reference.md) and [Monthly and annual aggregation](tools/aggregation.md)), [MCP protocol](mcp/index.md), [Deploy](deploy/index.md), [Develop](develop/index.md) and [About](about/index.md) sections.
