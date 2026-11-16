@@ -1,0 +1,17 @@
+# daymet-mcp YAML configuration (daymet-mcp --config config.yaml). Precedence:
+# CLI flag > environment > this file > defaults. The Earthdata token is NOT accepted here.
+server:
+  transport: stdio
+  host: 127.0.0.1
+  port: 8080
+  log_level: INFO
+daymet:
+  latest_year_fallback:
+    daily: 2025
+cache:
+  disk_dir: null
+limits:
+  pixel_mosaic_max_cells: 121
+  pixel_mosaic_max_cell_years: 605
+downloads:
+  dir: ./daymet-downloads

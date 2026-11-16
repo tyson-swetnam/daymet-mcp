@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Tyson Lee Swetnam
+# SPDX-License-Identifier: MIT
+#
+# Local or single-host deployment, published on the loopback interface only. Put a
+# TLS-terminating reverse proxy in front and set PUBLIC_BASE_URL for anything public.
+services:
+  daymet-mcp:
+    build: .
+    image: daymet-mcp:local
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DAYMET_MCP_SERVER__PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
+      DAYMET_MCP_SERVER__ALLOWED_HOSTS: "${ALLOWED_HOSTS:-}"
+      # The Earthdata backend stays off over HTTP unless the operator opts in (DESIGN.md D17):
+      # DAYMET_MCP_EARTHDATA__ALLOW_IN_HTTP_MODE: "true"
+      # DAYMET_MCP_EARTHDATA__TOKEN: "${DAYMET_MCP_EARTHDATA__TOKEN}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped

@@ -1,0 +1,133 @@
+# SPDX-FileCopyrightText: 2026 Tyson Lee Swetnam
+# SPDX-License-Identifier: MIT
+#
+# Actions are pinned by commit SHA (tags resolved on 2026-11-15).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 6 * * *"   # nightly live tests against ORNL DAAC and NASA CMR
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --frozen --all-extras
+      - name: Lint
+        run: |
+          uv run ruff check src tests scripts
+          uv run ruff format --check src tests scripts
+      - name: Type check
+        run: uv run mypy src
+      - name: Tests (hermetic, no network)
+        run: uv run pytest -q --cov=daymet_mcp --cov-report=term --cov-report=xml
+      - name: Fixture policy
+        run: uv run python scripts/record_fixtures.py check
+
+  macos:
+    name: test (macOS, py3.12)
+    if: github.event_name != 'schedule'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-extras
+      - run: uv run pytest -q tests/tools tests/transport tests/daymet/test_lcc.py
+
+  spec-conformance:
+    name: MCP 2026-07-28 conformance
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen --all-extras
+      - name: Assert the SDK is on the spec-aligned major
+        run: |
+          uv run python - <<'PY'
+          from importlib.metadata import version
+          resolved = version("mcp")
+          assert int(resolved.split(".")[0]) == 2, f"expected mcp 2.x, got {resolved}"
+          print("mcp", resolved)
+          PY
+      - run: uv run pytest -q tests/test_spec_conformance_2026_07_28.py tests/transport/
+      - name: Fail on MCP features daymet-mcp does not use (DESIGN.md D18)
+        run: |
+          uv run python - <<'PY'
+          import pathlib, re, sys
+          patterns = {
+              "sampling": r"\bcreate_message\b|sampling/createMessage",
+              "roots": r"\blist_roots\b|roots/list",
+              "logging/setLevel": r"logging/setLevel|\bset_level\b|on_set_logging_level",
+              "elicitation": r"\belicit\b|elicitation/create",
+              "progress": r"send_progress_notification|notifications/progress",
+              "legacy SSE": r"SseServerTransport|connect_sse",
+              "session ids": r"Mcp-Session-Id",
+          }
+          hits = []
+          for path in sorted(pathlib.Path("src").rglob("*.py")):
+              text = path.read_text(encoding="utf-8")
+              for label, pattern in patterns.items():
+                  for m in re.finditer(pattern, text):
+                      hits.append(f"{path}:{text[:m.start()].count(chr(10)) + 1}: {label}")
+          if hits:
+              print("\n".join(hits))
+              sys.exit("unsupported MCP features are in use")
+          print("no unsupported MCP feature use")
+          PY
+
+  docs:
+    name: docs (OKF, generated files, strict build)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen --extra docs
+      - run: uv run python scripts/okf_validate.py docs
+      - name: Generated files are up to date
+        run: |
+          uv run python scripts/gen_tools_reference.py
+          uv run python scripts/gen_config_reference.py
+          uv run python scripts/gen_llms_txt.py
+          git diff --exit-code docs/
+      - run: uv run zensical build --clean --strict
+
+  live:
+    name: live (network)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen --all-extras
+      - run: uv run pytest -q -m network tests/live

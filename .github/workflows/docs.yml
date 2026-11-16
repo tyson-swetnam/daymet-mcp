@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 Tyson Lee Swetnam
+# SPDX-License-Identifier: MIT
+#
+# Builds the OKF documentation bundle and deploys it to GitHub Pages from main.
+# Actions are pinned by commit SHA (tags resolved on 2026-11-15).
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6
+        with:
+          enablement: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen --extra docs
+      - run: uv run python scripts/okf_validate.py docs
+      - run: uv run zensical build --clean --strict
+      - run: uv run python scripts/postbuild_agent_surface.py site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5
+        with:
+          path: site
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5
+        id: deployment

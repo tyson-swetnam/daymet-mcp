@@ -159,3 +159,12 @@ def test_cli_offline_check(capsys: pytest.CaptureFixture[str]) -> None:
     assert info.value.code == 0
     report = json.loads(capsys.readouterr().out)
     assert report["ok"] and len(report["tools"]) == 8
+
+
+def test_example_files_are_valid() -> None:
+    root = Path(__file__).resolve().parent.parent
+    cfg = load_config(root / "config.yaml.example", environ={})
+    assert cfg.limits.pixel_mosaic_max_cells == 121
+    env_example = (root / ".env.example").read_text(encoding="utf-8")
+    for line in env_example.splitlines():
+        assert not line.strip() or line.startswith("#"), "no live values in .env.example"
