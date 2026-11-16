@@ -323,8 +323,11 @@ async def _pixel_cells(
     out: dict[tuple[int, int], dict[str, list[float | None]]] = {}
     headers: dict[tuple[int, int], dict[str, Any]] = {}
     off_grid = 0
+    # Failures are collected here instead of escaping the task group: anyio would wrap them in
+    # an ExceptionGroup, which registry.invoke cannot map (it surfaced as internal_error).
+    failures: list[UpstreamError] = []
 
-    async def one(cell: lcc.Cell) -> None:
+    async def one(cell: lcc.Cell, scope: anyio.CancelScope) -> None:
         nonlocal off_grid
         lat, lon = cell.centre_latlon()
         where = PixelLocation("na", round(lat, 6), round(lon, 6), cell)
@@ -334,7 +337,9 @@ async def _pixel_cells(
             if exc.status == 400 and TILE_NOT_FOUND in exc.message:
                 off_grid += 1
                 return
-            raise
+            failures.append(exc)
+            scope.cancel()  # fail fast: the mosaic is incomplete anyway
+            return
         series: dict[str, list[float | None]] = {}
         for y in sorted(set(years)):
             for var, values in data[y].values.items():
@@ -344,7 +349,10 @@ async def _pixel_cells(
 
     async with anyio.create_task_group() as tg:
         for cell in plan.included:
-            tg.start_soon(one, cell)
+            tg.start_soon(one, cell, tg.cancel_scope)
+    if failures:
+        # a 429 carries retryAfterS, the most useful thing to tell the caller
+        raise next((e for e in failures if e.status == 429), failures[0])
     return out, headers, off_grid
 
 

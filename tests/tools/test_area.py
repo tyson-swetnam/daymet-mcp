@@ -20,7 +20,14 @@ import daymet_mcp.tools.area as area_mod
 from daymet_mcp.config import Config
 from daymet_mcp.daymet.earthdata import grid_extra_available
 from daymet_mcp.server import DaymetServer
-from tests.fixture_router import DEM_CENTRE, MOSAIC_BBOX, TEST_TOKEN, FixtureRouter, fixture_json
+from tests.fixture_router import (
+    DEM_CENTRE,
+    MOSAIC_BBOX,
+    TEST_TOKEN,
+    FixtureRouter,
+    fixture_json,
+    pixel_key,
+)
 from tests.helpers import call_err, call_ok
 
 BASE = {"bbox": MOSAIC_BBOX, "start_year": 2020, "end_year": 2020}
@@ -221,6 +228,40 @@ async def test_cell_enumeration_runs_off_the_event_loop(
         )
     gaps = [b - a for a, b in pairwise(stamps)]
     assert max(gaps) < 0.3  # the loop kept running during the 0.6 s enumeration
+
+
+CORNER = (35.795614, -106.636921)  # two cells of the 3x3 mosaic fixture
+OTHER = (35.815790, -106.615806)
+
+
+@pytest.mark.parametrize(
+    ("failures", "code"),
+    [
+        ([(CORNER, 503)], ("upstream_unavailable",)),
+        ([(CORNER, 429)], ("rate_limited",)),
+        ([(CORNER, 404)], ("upstream_error",)),
+        # the first failure cancels the other fetches; either mapped code is acceptable
+        ([(CORNER, 503), (OTHER, 429)], ("upstream_unavailable", "rate_limited")),
+    ],
+)
+async def test_mosaic_upstream_failure_is_mapped(
+    server: DaymetServer,
+    router: FixtureRouter,
+    failures: list[tuple[tuple[float, float], int]],
+    code: tuple[str, ...],
+) -> None:
+    # Regression (protocol-security review): the task group wrapped UpstreamError in an
+    # ExceptionGroup, which surfaced as internal_error instead of the mapped code.
+    for (lat, lon), status in failures:
+        headers = {"retry-after": "7"} if status == 429 else None
+        router.add(pixel_key(lat, lon, years="2020"), status, text="x", headers=headers, times=3)
+    err = await call_err(
+        server, "daymet_get_area", {**BASE, "variables": ["prcp"], "temporal": "annual"}
+    )
+    assert err["code"] in code, err
+    assert "correlationId" not in err["details"]
+    if err["code"] == "rate_limited":
+        assert err["details"]["retryAfterS"] == 7.0
 
 
 @pytest.mark.parametrize(
