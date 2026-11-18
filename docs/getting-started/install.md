@@ -44,8 +44,9 @@ daymet-mcp --check --live             # adds one tiny live single-pixel request
 ## Container image
 
 The `Dockerfile` builds a two-stage image from a digest-pinned `python:3.13-slim`, installs the
-locked dependencies with `uv sync --frozen --no-dev`, runs as uid 10001 and serves Streamable HTTP
-on port 8080.
+locked dependencies with `uv sync --frozen --no-dev`, builds daymet-mcp with the hash-locked
+hatchling from the `build` dependency group (`--no-build-isolation`), runs as uid 10001 and serves
+Streamable HTTP on port 8080.
 
 ```bash
 docker build -t daymet-mcp:local .

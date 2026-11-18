@@ -31,6 +31,10 @@ python scripts/gen_tools_reference.py --check && python scripts/gen_config_refer
 * Every source file starts with SPDX lines (`SPDX-FileCopyrightText`, `SPDX-License-Identifier: MIT`).
 * Commit subjects start with `FIX:`, `FEATURE:`, `REFACTOR:`, `DOCS:`, `CLEANUP:`, `MODERNIZE:` or
   `UPDATE:`; the body says what changed, why, and how it was tested.
+* The build backend is pinned (`hatchling==1.33.0`) and hash-locked in `uv.lock` (`build` group).
+  CI and the Dockerfile install it first (`uv sync --frozen ... --no-install-project`) and then
+  build the project with `--no-build-isolation`, so nothing unhashed is fetched. A plain local
+  `uv sync` still uses an isolated build env (exact version, but no hash check).
 * CI (`.github/workflows/ci.yml`, actions pinned by commit SHA) runs lint, type checks and tests on
   Python 3.11-3.13, a conformance job, the docs checks, and a nightly live job.
 * Documentation pages carry OKF frontmatter; see `AGENTS.md` for the rules.

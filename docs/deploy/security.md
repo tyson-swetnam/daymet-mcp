@@ -33,3 +33,7 @@ status: stable
 * **Bounded CPU per call.** An area request is sized from its bounding rectangle before any
   cell is enumerated and refused when no backend open to the caller could serve it; the
   enumeration itself runs in a worker thread, so `/healthz` and the per-tool timeout keep working.
+* **Hash-verified build.** Base images are pinned by digest. Every runtime dependency and the build
+  backend (hatchling, in the `build` dependency group) are hash-locked in `uv.lock`; the image and CI
+  build daymet-mcp with `--no-build-isolation` from that verified environment, so no unhashed
+  package is fetched while building.

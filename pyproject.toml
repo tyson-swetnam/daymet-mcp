@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 [build-system]
-requires = ["hatchling>=1.27,<2"]
+# Exact pin. The same version is hash-locked in uv.lock through the `build` dependency group;
+# the Dockerfile and CI build with --no-build-isolation from that verified environment.
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -55,6 +57,10 @@ dev = [
     "pyproj>=3.6,<4",
 ]
 
+[dependency-groups]
+# Build backend (and hatchling's editable-install helper), hash-locked in uv.lock.
+build = ["hatchling==1.33.0", "editables==0.5"]
+
 [project.scripts]
 daymet-mcp = "daymet_mcp.__main__:main"
 
@@ -73,8 +79,10 @@ packages = ["src/daymet_mcp"]
 include = ["src/daymet_mcp", "tests", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE"]
 
 [tool.uv]
-# Hash-pinned lock: uv.lock. Docker installs with `uv sync --frozen`.
+# Hash-pinned lock: uv.lock, including the build backend (`build` group). Docker and CI install
+# with `uv sync --frozen --no-build-isolation`, so no unhashed build dependency is fetched.
 required-version = ">=0.5"
+default-groups = ["build"]
 
 [tool.ruff]
 line-length = 100

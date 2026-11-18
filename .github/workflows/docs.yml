@@ -10,6 +10,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  # Build daymet-mcp with the hash-locked hatchling from the `build` dependency group
+  # (uv.lock), never in an isolated build env resolved from PyPI without hashes.
+  UV_NO_BUILD_ISOLATION: "1"
+
 permissions:
   contents: read
   pages: write
@@ -33,6 +38,9 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: "3.13"
+      # Install the hash-locked build group (hatchling) first, then build daymet-mcp with it
+      # (no isolated build env resolved from PyPI without hashes).
+      - run: uv sync --frozen --extra docs --no-install-project
       - run: uv sync --frozen --extra docs
       - run: uv run python scripts/okf_validate.py docs
       - run: uv run zensical build --clean --strict

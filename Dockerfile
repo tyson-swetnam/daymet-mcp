@@ -3,7 +3,8 @@
 #
 # daymet-mcp: stateless Streamable HTTP image (stdio also works: docker run -i ... --transport stdio).
 # Base images are pinned by digest: python 3.13.15 (Debian) and uv 0.13.8. Dependencies are
-# installed from the hash-pinned uv.lock (`uv sync --frozen` verifies every sha256).
+# installed from the hash-pinned uv.lock (`uv sync --frozen` verifies every sha256), and so is the
+# build backend: hatchling comes from the locked `build` group, not from an unhashed PyPI resolve.
 
 ARG PYTHON_IMAGE=python@sha256:7c61056e61ac89e852de05f3dc6fa51a6dd2181797bceed46aa725dd7cb2cd3b
 ARG UV_IMAGE=ghcr.io/astral-sh/uv@sha256:81a1340fea1e72ad4a8e9a016128b0c61041cf182ea49fd788023e52842bc147
@@ -18,9 +19,13 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
+# Runtime dependencies plus the `build` group (hatchling, hash-locked in uv.lock).
 RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
-RUN uv sync --frozen --no-dev --no-editable
+# Build daymet-mcp with that verified hatchling (no isolated build env resolved from PyPI
+# without hashes), then drop the build group from the runtime venv.
+RUN uv sync --frozen --no-dev --no-editable --no-build-isolation \
+ && uv sync --frozen --no-dev --no-default-groups --no-editable --no-build-isolation
 
 FROM ${PYTHON_IMAGE}
 RUN useradd --create-home --uid 10001 --user-group daymet

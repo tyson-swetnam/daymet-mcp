@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-11-18
+
+* **Update**: [Security](deploy/security.md), [Install](getting-started/install.md) and [Contributing](develop/contributing.md) describe the hash-locked build backend (`build` dependency group, `--no-build-isolation`).
+
 ## 2026-11-15
 
 * **Update**: [Areas and downloads](tools/areas-and-downloads.md) and [Security](deploy/security.md) describe the bounding-rectangle check that refuses oversized area requests before any cell is enumerated.

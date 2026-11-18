@@ -12,6 +12,11 @@ on:
   schedule:
     - cron: "23 6 * * *"   # nightly live tests against ORNL DAAC and NASA CMR
 
+env:
+  # Build daymet-mcp with the hash-locked hatchling from the `build` dependency group
+  # (uv.lock), never in an isolated build env resolved from PyPI without hashes.
+  UV_NO_BUILD_ISOLATION: "1"
+
 permissions:
   contents: read
 
@@ -33,6 +38,9 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: ${{ matrix.python-version }}
+      # Install the hash-locked build group (hatchling) first, then build daymet-mcp with it
+      # (no isolated build env resolved from PyPI without hashes).
+      - run: uv sync --frozen --all-extras --no-install-project
       - run: uv sync --frozen --all-extras
       - name: Lint
         run: |
@@ -54,6 +62,9 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: "3.12"
+      # Install the hash-locked build group (hatchling) first, then build daymet-mcp with it
+      # (no isolated build env resolved from PyPI without hashes).
+      - run: uv sync --frozen --all-extras --no-install-project
       - run: uv sync --frozen --all-extras
       - run: uv run pytest -q tests/tools tests/transport tests/daymet/test_lcc.py
 
@@ -66,6 +77,9 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: "3.13"
+      # Install the hash-locked build group (hatchling) first, then build daymet-mcp with it
+      # (no isolated build env resolved from PyPI without hashes).
+      - run: uv sync --frozen --all-extras --no-install-project
       - run: uv sync --frozen --all-extras
       - name: Assert the SDK is on the spec-aligned major
         run: |
@@ -110,6 +124,9 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: "3.13"
+      # Install the hash-locked build group (hatchling) first, then build daymet-mcp with it
+      # (no isolated build env resolved from PyPI without hashes).
+      - run: uv sync --frozen --extra docs --no-install-project
       - run: uv sync --frozen --extra docs
       - run: uv run python scripts/okf_validate.py docs
       - name: Generated files are up to date
@@ -129,5 +146,8 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: "3.13"
+      # Install the hash-locked build group (hatchling) first, then build daymet-mcp with it
+      # (no isolated build env resolved from PyPI without hashes).
+      - run: uv sync --frozen --all-extras --no-install-project
       - run: uv sync --frozen --all-extras
       - run: uv run pytest -q -m network tests/live
