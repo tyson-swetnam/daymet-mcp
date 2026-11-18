@@ -185,9 +185,15 @@ async def test_mid_bbox_without_token_says_what_is_missing(
     args = {**BASE, "bbox": MID_BBOX, "variables": ["prcp"], "temporal": "annual"}
     err = await call_err(make_server(), "daymet_get_area", args, code="auth_required")
     assert err["details"]["reason"] == "token_missing"
-    await call_err(
+    # Refused before enumeration: the size given is the bounding rectangle, labelled as such.
+    assert "cells" not in err["details"]
+    assert err["details"]["boundingRectangleCells"] > 121
+    assert "a bounding rectangle of" in err["message"]
+    err = await call_err(
         make_server(transport="http"), "daymet_get_area", args, code="not_available_in_http_mode"
     )
+    assert "cells" not in err["details"]
+    assert err["details"]["boundingRectangleCells"] > 121
     assert router.calls == []
 
 
@@ -195,12 +201,19 @@ async def test_explicit_earthdata_refused_without_planning(
     make_server: Callable[..., DaymetServer], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _no_enumeration(monkeypatch)
-    await call_err(
+    args = {**BASE, "variables": ["prcp"], "temporal": "annual", "backend": "earthdata"}
+    err = await call_err(
         make_server(transport="http", token=TEST_TOKEN),
         "daymet_get_area",
-        {**BASE, "variables": ["prcp"], "temporal": "annual", "backend": "earthdata"},
+        args,
         code="not_available_in_http_mode",
     )
+    assert "cells" not in err["details"]
+    # Without a token the reason is the forced backend, not a (wrong) size comparison.
+    err = await call_err(make_server(), "daymet_get_area", args, code="auth_required")
+    assert "backend='earthdata' was requested" in err["message"]
+    assert "exceeds the credential-free limit" not in err["message"]
+    assert err["details"]["reason"] == "token_missing"
 
 
 async def test_cell_enumeration_runs_off_the_event_loop(

@@ -58,4 +58,6 @@ against the largest size a backend available to the caller could serve: 400 x
 their rectangle is much larger than their cell count) and, with a usable Earthdata token,
 `earthdata_max_values` / (365 x years x variables). A larger rectangle is refused at once with
 `query_too_large` and `limitName: candidate_cells`, or with `auth_required` /
-`not_available_in_http_mode` when Earthdata alone could serve it.
+`not_available_in_http_mode` when Earthdata alone could serve it. Errors raised at this stage
+report `details.boundingRectangleCells` (the rectangle, including a one-cell margin), not
+`details.cells` (cells whose centres fall inside the bbox), because the cells have not been counted.

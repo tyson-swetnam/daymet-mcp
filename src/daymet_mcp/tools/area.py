@@ -217,29 +217,51 @@ def _earthdata_blocked(ctx: ToolContext) -> str | None:
     return None
 
 
-def _earthdata_error(ctx: ToolContext, reason: str, n_cells: int, n_years: int) -> ToolError:
+def _earthdata_error(
+    ctx: ToolContext,
+    reason: str,
+    n_cells: int,
+    n_years: int,
+    *,
+    rectangle: bool = False,
+    forced: bool = False,
+) -> ToolError:
+    """``rectangle``: refused before enumeration, so ``n_cells`` is the bbox's bounding
+    rectangle (with its one-cell margin), not the cells whose centres fall inside it.
+    ``forced``: the caller asked for backend=earthdata (the size is not the reason)."""
     lim = ctx.config.limits
+    size: dict[str, int] = {"boundingRectangleCells": n_cells} if rectangle else {"cells": n_cells}
     if reason == "http":
         return ToolError(
             "not_available_in_http_mode",
             "The Earthdata backend is disabled on this hosted server.",
             details={
                 "reason": "earthdata_disabled_in_http_mode",
-                "cells": n_cells,
+                **size,
                 "limit": lim.pixel_mosaic_max_cells,
             },
             hint="Reduce the bbox to the credential-free limit, or run daymet-mcp locally.",
         )
+    if forced:
+        why = "backend='earthdata' was requested"
+    else:
+        area = (
+            f"a bounding rectangle of {n_cells} cells"
+            if rectangle
+            else f"an area of {n_cells} cells"
+        )
+        why = (
+            f"{area} x {n_years} years exceeds the credential-free limit of "
+            f"{lim.pixel_mosaic_max_cells} cells / {lim.pixel_mosaic_max_cell_years} cell-years"
+        )
     return ToolError(
         "auth_required",
-        "This request needs gridded Daymet data from NASA Earthdata (area of "
-        f"{n_cells} cells x {n_years} years exceeds the credential-free limit of "
-        f"{lim.pixel_mosaic_max_cells} cells / {lim.pixel_mosaic_max_cell_years} cell-years). "
+        f"This request needs gridded Daymet data from NASA Earthdata ({why}). "
         "No Earthdata token is configured. Set the environment variable "
         "DAYMET_MCP_EARTHDATA__TOKEN before starting the server (stdio), or reduce the bbox.",
         details={
             "reason": "token_missing",
-            "cells": n_cells,
+            **size,
             "guide": "daymet://guide/earthdata-credentials",
         },
     )
@@ -264,7 +286,7 @@ def _check_rectangle(
     """
     blocked = _earthdata_blocked(ctx)
     if args.backend == "earthdata" and blocked is not None:
-        raise _earthdata_error(ctx, blocked, bounds.cells, n_years)
+        raise _earthdata_error(ctx, blocked, bounds.cells, n_years, rectangle=True, forced=True)
     caps: list[int] = []
     if args.backend in ("auto", "single_pixel"):
         caps.append(PIXEL_RECT_FACTOR * ctx.config.limits.pixel_mosaic_max_cells)
@@ -278,7 +300,7 @@ def _check_rectangle(
         return
     if args.backend == "auto" and blocked is not None and bounds.cells <= ed_cap:
         # Earthdata could serve this size; say what is missing, as the full plan would.
-        raise _earthdata_error(ctx, blocked, bounds.cells, n_years)
+        raise _earthdata_error(ctx, blocked, bounds.cells, n_years, rectangle=True)
     raise _too_many_candidates(bounds, cap)
 
 
