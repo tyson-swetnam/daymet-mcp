@@ -16,8 +16,8 @@ and are not part of this repository.
 
 # daymet-mcp: conventions of the reference MCP servers (Research A)
 
-Date: 2026-11-15. Sources read with `gh api repos/idss-mesa/<repo>/contents/<path>` (raw), saved under
-`/tmp/claude-57275/-home-tswetnam-github-eemt/5f7c764c-7e9c-4e13-8e3a-28e873e17aac/scratchpad/daymet-mcp/research-a/{neon,amf}/`.
+Date: 2026-11-15. Sources read with `gh api repos/idss-mesa/<repo>/contents/<path>` (raw), saved in a local
+scratch directory that is not part of this repository.
 Primary model: **idss-mesa/neon-mcp** (`main`). Secondary: **idss-mesa/ameriflux-mcp** (`main`), which states it
 ports its core from **idss-mesa/edi-mcp** and its ratelimit/resolve/downloads/prompts/Docker/release from neon-mcp
 (ameriflux `DESIGN.md` D2). edi-mcp and mesa-mcp were not read (GitHub API rate limit reached at the end of the read;
@@ -25,8 +25,8 @@ they appear in the org listing).
 
 Labels: **[seen]** = read in the file named; **[inferred]** = my reading of how it applies to Daymet, not verified.
 
-Owner decision relevant here (`owner-decisions.log` line 18): the repo is `tyson-swetnam/daymet-mcp`, built locally in
-`/home/tswetnam/github/daymet-mcp`, not under idss-mesa. URLs below that say `idss-mesa/...` are the reference
+Owner decision relevant here (`owner-decisions.log` line 18): the repo is `tyson-swetnam/daymet-mcp`,
+not under idss-mesa. URLs below that say `idss-mesa/...` are the reference
 servers' values; daymet-mcp substitutes its own.
 
 ---
@@ -333,10 +333,9 @@ Each line: convention -> where it is in the reference servers.
 Date: 2026-11-15. All requests were sent from `python@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f`
 (the local `python:3.14-slim`, used by digest, not pulled), run as the invoking UID:GID, using only the stdlib (`http.client`/`urllib`),
 with the User-Agent `daymet-mcp/0.1 (+https://github.com/idss-mesa)`, **no credentials**. Redirects were followed hop by hop and logged.
-Raw evidence (status chain, selected headers, first bytes, full bodies) lives in
-`/tmp/claude-57275/-home-tswetnam-github-eemt/5f7c764c-7e9c-4e13-8e3a-28e873e17aac/scratchpad/daymet-mcp/research-b/`
-(`<tag>.log`, `<tag>.body`, `index.tsv` = tag -> final status; `guide_*.txt` = `pdftotext -layout` of the user guides).
-Probe scripts: `.../scratchpad/daymet-mcp/research-b-scripts/{fetch.py,run.sh,mpc_zarr.py,strip.py}`.
+Raw evidence (status chain, selected headers, first bytes, full bodies) was kept in a local scratch directory that is
+not part of this repository (`<tag>.log`, `<tag>.body`, `index.tsv` = tag -> final status; `guide_*.txt` =
+`pdftotext -layout` of the user guides), as were the probe scripts (`fetch.py`, `run.sh`, `mpc_zarr.py`, `strip.py`).
 About 90 requests in total, each a single pixel, a 2-day subset, or metadata.
 
 Labels: **[seen]** = I ran it and saw the output quoted; **[inferred]** = my reading, not verified; **[not run]** = not tested.

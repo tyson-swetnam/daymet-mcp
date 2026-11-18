@@ -1,7 +1,7 @@
 # daymet-mcp design
 
 Status: design for v0.1.0, written 2026-11-15, before any code exists. This file becomes the repository's `DESIGN.md`.
-Repository: `tyson-swetnam/daymet-mcp`, built locally in `/home/tswetnam/github/daymet-mcp` (owner decisions, 2026-11-15).
+Repository: `tyson-swetnam/daymet-mcp` (owner decisions, 2026-11-15).
 
 It is based on two research notes: `research-conventions.md` (conventions of idss-mesa/neon-mcp and ameriflux-mcp)
 and `research-daymet-access.md` (live tests of every Daymet V4 R1 access path, without credentials). Labels used below:
